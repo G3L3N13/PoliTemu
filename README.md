@@ -45,6 +45,5 @@ node main.js
 # Funcionalidades principales
 - Registro e inicio de sesión de usuarios
 
-# Mockup preliminar del Login Y Registro 
-  <img width="671" height="20" alt="image" src="https://github.com/user-attachments/assets/32a409dd-4ab3-4678-9b58-4d93eb9b2047" />
+
 
