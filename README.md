@@ -113,54 +113,47 @@ node main.js
 
 ## 📁 Estructura del proyecto
 
-backend/
-├── src/
-│ ├── app.js
-
-frontend/
-├── public/
-├── src/
-│ ├── assets/
-│ ├── pages/
-│ │ ├── Login.jsx
-│ │ ├── Register.jsx
-│ ├── components/
-│ ├── App.css
-│ ├── App.jsx
-│ ├── index.css
-│ ├── main.jsx
-├── index.html
-├── package-lock.json
-├── package.json
-├── vite.config.js
-
-
-# Estructura del proyecto
 - '/backend/package.json'
 - '/frontend' "Aqui van a ir los archivos HTML, CSS y JS"
+
 .
-├── backend
-│   ├── package.json
-│   └── package-lock.json
+│──backend/
+│  │── src/
+│  │  ├── app.js
 │
-├── frontend
-│   ├── public/
-│   ├── src/
-│   │   ├── pages/
-│   │   ├── App.css
-│   │   ├── App.jsx
-│   │   ├── index.css
-│   │   └── main.jsx
-│   ├── .gitignore
-│   ├── eslint.config.js
-│   ├── index.html
-│   ├── package.json
-│   ├── package-lock.json
-│   ├── README.md
-│   └── vite.config.js
+│  frontend/
+│  ├── public/
+│  ├── src/
+│  │    ├── assets/
+│  │    ├── pages/
+│  │    │    ├── Login.jsx
+│  │    │    ├── Register.jsx
+│  │    ├── components/
+│  │    ├── App.css
+│  │    ├── App.jsx
+│  │    ├── firebase.js
+│  │    ├── index.css
+│  │    ├── main.jsx
+│  ├── .gitignore
+│  ├── eslint.config.js
+│  ├── index.html
+│  ├── package-lock.json
+│  ├── package.json
+│  ├── README.md
+│  └── vite.config.js
 │
 ├── .gitignore
 └── README.md
+
+---
+
+# Mockup de Reagistro y Login 
+
+<p align="center">
+  <img src="/frontend/src/assets/InicioSesion.jpeg" width="70%" />
+ 
+</p>
+
 
 ---
 
