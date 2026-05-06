@@ -30,6 +30,9 @@ Desarrollar un sistema web que centralice el intercambio académico de forma org
 ---
 
 ## 💻 Tecnologías utilizadas
+- Servidor: Node.js
+- Control de verisiones: Git/GitHub
+
 
 ### Frontend:
 
@@ -56,9 +59,16 @@ Desarrollar un sistema web que centralice el intercambio académico de forma org
 
 ---
 
-## 🧠 Funcionalidades principales
+# Ejecución del Backend
+- cd backend
+npm run dev
 
- En un futuro se puede implementar: sistema de chat, reputación, filtros inteligentes
+# Ejecución del Frontend
+node main.js
+
+---
+
+## 🧠 Funcionalidades principales
 
 
 <div align="center">
@@ -123,6 +133,34 @@ frontend/
 ├── package-lock.json
 ├── package.json
 ├── vite.config.js
+
+
+# Estructura del proyecto
+- '/backend/package.json'
+- '/frontend' "Aqui van a ir los archivos HTML, CSS y JS"
+.
+├── backend
+│   ├── package.json
+│   └── package-lock.json
+│
+├── frontend
+│   ├── public/
+│   ├── src/
+│   │   ├── pages/
+│   │   ├── App.css
+│   │   ├── App.jsx
+│   │   ├── index.css
+│   │   └── main.jsx
+│   ├── .gitignore
+│   ├── eslint.config.js
+│   ├── index.html
+│   ├── package.json
+│   ├── package-lock.json
+│   ├── README.md
+│   └── vite.config.js
+│
+├── .gitignore
+└── README.md
 
 ---
 
