@@ -10,12 +10,18 @@
     "preview": "vite preview"
   },
   "dependencies": {
+<<<<<<< HEAD
     "chart.js": "^4.5.1",
     "firebase": "^12.12.1",
     "react": "^19.2.5",
     "react-chartjs-2": "^5.3.1",
     "react-dom": "^19.2.5",
     "react-router-dom": "^7.15.0"
+=======
+    "firebase": "^12.12.1",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+>>>>>>> ed83b7c051b9f0111a0fdcb3c9c58b749d9bcd19
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

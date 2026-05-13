@@ -14,8 +14,11 @@
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "firebase": "^12.12.1"
+<<<<<<< HEAD
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
+=======
+>>>>>>> ed83b7c051b9f0111a0fdcb3c9c58b749d9bcd19
   }
 }
