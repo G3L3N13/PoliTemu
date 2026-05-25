@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+/* Esto le dice a Tailwind v4 que busque clases en todos tus archivos .jsx */
+@source "./**/*.{js,jsx,ts,tsx}";
+
+/* Tus animaciones personalizadas abajo */
+@keyframes fadeInForm {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-form-fade {
+  animation: fadeInForm 0.5s ease-out forwards;
+}
