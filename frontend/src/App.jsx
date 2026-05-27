@@ -13,7 +13,8 @@ import VerifyEmail from "./pages/VerifyEmail";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import AdminProductos from "./pages/AdminProductos";
-import TokenDebug from "./components/TokenDebug";
+
+import ProductPage from "./pages/ProductPage";
 
 function AppRoutes() {
   return (
@@ -26,10 +27,11 @@ function AppRoutes() {
       <Route path="/verify-email" element={<VerifyEmail />} />
 
       {/* Privadas */}
-      <Route path="/home-privado" element={<PrivateRoute><HomePrivado /></PrivateRoute>} />
+      <Route path="/home" element={<PrivateRoute><HomePrivado /></PrivateRoute>} />
       <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
       <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
       <Route path="/admin" element={<PrivateRoute><AdminProductos /></PrivateRoute>} />
+      <Route path="/product/:id" element={<ProductPage />} />
 
       {/* Temporal 404 para depuración */}
       <Route path="*" element={<div style={{ padding: 40 }}>Página no encontrada (404)</div>} />
@@ -41,7 +43,6 @@ export default function App() {
   return (
     <AuthProvider>
       <Layout>
-        <TokenDebug />
         <main>
           <AppRoutes />
         </main>

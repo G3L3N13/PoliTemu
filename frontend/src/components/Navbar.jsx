@@ -1,3 +1,4 @@
+// frontend/src/components/Navbar.jsx
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
@@ -6,7 +7,7 @@ import { useAuth } from "../context/AuthContext";
 
 function Navbar() {
   const [open, setOpen] = useState(false);
-  const { user, isAdmin } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -17,7 +18,7 @@ function Navbar() {
   return (
     <nav className="bg-blue-950 border-b border-white/10 px-6 py-3 flex items-center justify-between relative">
       {/* Logo */}
-      <Link to="/home" className="text-xl font-black text-white tracking-tight">
+      <Link to="/" className="text-xl font-black text-white tracking-tight">
         Poli<span className="text-yellow-400">Temu</span>
       </Link>
 
@@ -32,21 +33,18 @@ function Navbar() {
       {/* Links desktop */}
       <ul className="hidden md:flex items-center gap-6 text-sm">
         <li>
-          <Link to="/home" className="text-blue-200 hover:text-yellow-400 transition">
+          <Link to="/" className="text-blue-200 hover:text-yellow-400 transition">
             Inicio
           </Link>
         </li>
 
         {user ? (
           <>
-            {/* 🔥 Dashboard solo para administradores */}
-            {isAdmin && (
-              <li>
-                <Link to="/dashboard" className="text-blue-200 hover:text-yellow-400 transition">
-                  Dashboard
-                </Link>
-              </li>
-            )}
+            <li>
+              <Link to="/home" className="text-blue-200 hover:text-yellow-400 transition">
+                Catálogo
+              </Link>
+            </li>
             <li>
               <Link to="/profile" className="text-blue-200 hover:text-yellow-400 transition">
                 Mi Perfil
@@ -83,16 +81,13 @@ function Navbar() {
       {/* Menú móvil */}
       {open && (
         <ul className="absolute top-full left-0 right-0 bg-blue-950 border-t border-white/10 flex flex-col gap-1 p-4 md:hidden z-50">
-          <li><Link to="/home" className="block text-blue-200 py-2" onClick={() => setOpen(false)}>Inicio</Link></li>
+          <li><Link to="/" className="block text-blue-200 py-2" onClick={() => setOpen(false)}>Inicio</Link></li>
           {user ? (
             <>
-              {/* 🔥 Dashboard solo para administradores */}
-              {isAdmin && (
-                <li><Link to="/dashboard" className="block text-blue-200 py-2" onClick={() => setOpen(false)}>Dashboard</Link></li>
-              )}
+              <li><Link to="/home" className="block text-blue-200 py-2" onClick={() => setOpen(false)}>Catálogo</Link></li>
               <li><Link to="/profile" className="block text-blue-200 py-2" onClick={() => setOpen(false)}>Mi Perfil</Link></li>
               <li>
-                <button onClick={handleLogout} className="text-yellow-400 py-2 font-bold">
+                <button onClick={handleLogout} className="text-yellow-400 py-2 font-bold w-full text-left">
                   Cerrar sesión
                 </button>
               </li>

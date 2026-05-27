@@ -14,6 +14,7 @@ function HomePrivado() {
   const [indiceFotoActual, setIndiceFotoActual] = useState(0);
   const [busqueda, setBusqueda] = useState("");
   const [categoriaActiva, setCategoriaActiva] = useState("Todos");
+  
   const opciones = [
     { titulo: "Productos",      descripcion: "Explora el catálogo",     ruta: "/productos", icon: <ShoppingBag size={28} />, color: "from-purple-600/20 to-purple-800/10", border: "hover:border-purple-500/50" },
     { titulo: "Carrito",        descripcion: "Revisa tus compras",      ruta: "/carrito",   icon: <ShoppingCart size={28} />, color: "from-yellow-500/20 to-yellow-700/10", border: "hover:border-yellow-500/50" },
@@ -21,11 +22,27 @@ function HomePrivado() {
     { titulo: "Mi Perfil",      descripcion: "Gestiona tu cuenta",      ruta: "/profile",   icon: <User size={28} />, color: "from-blue-600/20 to-blue-800/10", border: "hover:border-blue-500/50" },
     { titulo: "Vender",         descripcion: "Publica un artículo",     ruta: "/admin",     icon: <Plus size={28} />, color: "from-pink-600/20 to-pink-800/10", border: "hover:border-pink-500/50" },
   ];
+
+  // 🔥 FUNCIÓN MEJORADA PARA OBTENER IMÁGENES
   const obtenerListaImagenes = (producto) => {
     if (!producto?.imagenUrl) return [];
-    if (Array.isArray(producto.imagenUrl)) return producto.imagenUrl;
-    return producto.imagenUrl.split(",").map((u) => u.trim()).filter(Boolean);
+    
+    // Si es array, devolvemos directamente
+    if (Array.isArray(producto.imagenUrl)) {
+      return producto.imagenUrl.filter(url => url && url.trim());
+    }
+    
+    // Si es string, dividimos por coma y limpiamos espacios
+    if (typeof producto.imagenUrl === "string" && producto.imagenUrl.trim()) {
+      return producto.imagenUrl
+        .split(",")
+        .map((url) => url.trim())
+        .filter(Boolean);
+    }
+    
+    return [];
   };
+
   const categorias = ["Todos", ...new Set(productos.map((p) => p.categoria).filter(Boolean))];
   const productosFiltrados = productos.filter((p) => {
     const coincideBusqueda = p.nombre?.toLowerCase().includes(busqueda.toLowerCase());
@@ -33,17 +50,34 @@ function HomePrivado() {
     return coincideBusqueda && coincideCategoria;
   });
 
+  // 🔥 SVG PLACEHOLDER INLINE
+  const SVG_PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23333'/%3E%3Ctext x='50%25' y='50%25' font-size='24' fill='%23999' text-anchor='middle' dominant-baseline='middle'%3ESin imagen%3C/text%3E%3C/svg%3E";
+
   useEffect(() => {
     const cargar = async () => {
-      if (!user) { setCargando(false); return; }
+      if (!user) { 
+        setCargando(false); 
+        return; 
+      }
       try {
         const token = await user.getIdToken(true);
         const data = await productosService.getTodos({
           headers: { Authorization: `Bearer ${token}` }
         });
-        setProductos(data);
-      } catch {
+        
+        // Validar que sea array
+        if (Array.isArray(data)) {
+          setProductos(data);
+          console.log("✅ Productos cargados:", data);
+        } else {
+          console.error("❌ Respuesta no es array:", data);
+          setProductos([]);
+          setError("Error: Formato de respuesta inválido");
+        }
+      } catch (err) {
+        console.error("❌ Error al cargar productos:", err);
         setError("Error al cargar productos.");
+        setProductos([]);
       } finally {
         setCargando(false);
       }
@@ -168,18 +202,23 @@ function HomePrivado() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 relative z-10">
               {productosFiltrados.map((producto) => {
                 const imagenes = obtenerListaImagenes(producto);
+                const imagenPrincipal = imagenes[0] || SVG_PLACEHOLDER;
+                
                 return (
                   <div
-                    key={producto.id}
+                    key={producto._id || producto.id}
                     onClick={() => { setIndiceFotoActual(0); setProductoSeleccionado(producto); }}
-                    className="group bg-white/5 border border-white/10 backdrop-blur-lg rounded-3xl overflow-hidden cursor-pointer hover:border-purple-500/40 hover:scale-[1.02] transition-all duration-300 shadow-lg"
+                    className="group bg-white/5 border border-white/10 backdrop-blur-lg rounded-3xl overflow-hidden cursor-pointer hover:border-purple-500/40 hover:scale-[1.02] transition-all duration-300"
                   >
-                    <div className="h-64 overflow-hidden relative">
+                    <div className="h-64 overflow-hidden relative bg-white/5">
                       <img
-                        src={imagenes[0] || "https://via.placeholder.com/400x300?text=Sin+imagen"}
+                        src={imagenPrincipal}
                         alt={producto.nombre}
                         className="w-full h-full object-cover group-hover:scale-110 transition duration-500"
-                        onError={(e) => { e.target.src = "https://via.placeholder.com/400x300?text=Sin+imagen"; }}
+                        onError={(e) => { 
+                          e.target.src = SVG_PLACEHOLDER;
+                          console.warn(`⚠️ Error cargando imagen de ${producto.nombre}`);
+                        }}
                       />
                       {producto.categoria && (
                         <span className="absolute top-3 left-3 bg-purple-600/80 backdrop-blur text-white text-xs px-3 py-1 rounded-full">
@@ -233,9 +272,10 @@ function HomePrivado() {
                 ◀
               </button>
               <img
-                src={obtenerListaImagenes(productoSeleccionado)[indiceFotoActual] || ""}
+                src={obtenerListaImagenes(productoSeleccionado)[indiceFotoActual] || SVG_PLACEHOLDER}
                 alt=""
-                className="w-72 h-72 object-cover rounded-3xl border border-white/10"
+                className="w-72 h-72 object-cover rounded-3xl border border-white/10 bg-white/5"
+                onError={(e) => { e.target.src = SVG_PLACEHOLDER; }}
               />
               <button
                 onClick={() => setIndiceFotoActual((p) => Math.min(obtenerListaImagenes(productoSeleccionado).length - 1, p + 1))}

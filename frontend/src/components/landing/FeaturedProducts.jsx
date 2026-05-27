@@ -1,50 +1,45 @@
+// src/components/landing/FeaturedProducts.jsx
 import { useEffect, useState } from "react";
 import { productosService } from "../../services/api";
 
 const valoraciones = [
-  {
-    nombre: "Sarah M.",
-    texto: "Encontré todos mis libros de cálculo a mitad de precio. ¡Increíble plataforma!",
-    estrellas: 5,
-    avatar: "S",
-  },
-  {
-    nombre: "Alex K.",
-    texto: "Vendí mi calculadora en menos de un día. El proceso fue muy sencillo y seguro.",
-    estrellas: 5,
-    avatar: "A",
-  },
-  {
-    nombre: "James R.",
-    texto: "La comunidad universitaria es muy activa. Siempre hay productos nuevos disponibles.",
-    estrellas: 4,
-    avatar: "J",
-  },
+  { nombre: "Sarah M.", texto: "Encontré todos mis libros de cálculo a mitad de precio. ¡Increíble plataforma!", estrellas: 5, avatar: "S" },
+  { nombre: "Alex K.", texto: "Vendí mi calculadora en menos de un día. El proceso fue muy sencillo y seguro.", estrellas: 5, avatar: "A" },
+  { nombre: "James R.", texto: "La comunidad universitaria es muy activa. Siempre hay productos nuevos disponibles.", estrellas: 4, avatar: "J" },
 ];
 
 function Estrellas({ cantidad }) {
   return (
     <div className="flex gap-1">
       {[1, 2, 3, 4, 5].map((i) => (
-        <span key={i} className={i <= cantidad ? "text-yellow-400" : "text-gray-600"}>
-          ★
-        </span>
+        <span key={i} className={i <= cantidad ? "text-yellow-400" : "text-gray-600"}>★</span>
       ))}
     </div>
   );
 }
 
-function FeaturedProducts() {
+function FeaturedProducts({ onOpenModal }) {
   const [productos, setProductos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
+
+  const obtenerPrimeraImagen = (imagenUrl) => {
+    if (!imagenUrl) return "https://via.placeholder.com/400x300?text=Sin+imagen";
+    if (Array.isArray(imagenUrl)) return imagenUrl[0];
+    const urls = imagenUrl.split(",").map((u) => u.trim()).filter(Boolean);
+    return urls[0] || "https://via.placeholder.com/400x300?text=Sin+imagen";
+  };
 
   useEffect(() => {
     const cargar = async () => {
       try {
         const data = await productosService.getTodos();
-        setProductos(data.slice(0, 4));
-      } catch {
+        const items = Array.isArray(data)
+          ? data.slice(0, 4).map(p => ({ id: p._id || p.id, ...p }))
+          : [];
+        setProductos(items);
+      } catch (err) {
+        console.error("Error al cargar productos:", err);
         setError("No se pudieron cargar los productos.");
       } finally {
         setCargando(false);
@@ -55,10 +50,8 @@ function FeaturedProducts() {
 
   return (
     <>
-      {/* ── PRODUCTOS DESTACADOS ── */}
       <section id="productos" className="py-28 px-6">
         <div className="max-w-7xl mx-auto">
-
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-black text-white">
               PRODUCTOS <span className="text-yellow-400">DESTACADOS</span>
@@ -66,10 +59,9 @@ function FeaturedProducts() {
             <p className="text-gray-400 mt-4">Los artículos más recientes de la comunidad</p>
           </div>
 
-          {/* Skeleton de carga */}
           {cargando && (
             <div className="grid md:grid-cols-4 gap-6">
-              {[1, 2, 3, 4].map((i) => (
+              {[1,2,3,4].map(i => (
                 <div key={i} className="bg-white/5 rounded-3xl overflow-hidden animate-pulse">
                   <div className="h-56 bg-white/10" />
                   <div className="p-5 space-y-3">
@@ -82,17 +74,12 @@ function FeaturedProducts() {
             </div>
           )}
 
-          {/* Error */}
-          {error && (
-            <p className="text-center text-red-400">{error}</p>
-          )}
+          {error && <p className="text-center text-red-400">{error}</p>}
 
-          {/* Sin productos */}
           {!cargando && !error && productos.length === 0 && (
             <p className="text-center text-gray-400">Aún no hay productos registrados.</p>
           )}
 
-          {/* Grid de productos */}
           {!cargando && !error && productos.length > 0 && (
             <div className="grid md:grid-cols-4 gap-6">
               {productos.map((producto) => (
@@ -100,15 +87,15 @@ function FeaturedProducts() {
                   key={producto.id}
                   className="group bg-white/5 border border-white/10 backdrop-blur-lg rounded-3xl overflow-hidden hover:border-purple-500/40 hover:scale-[1.02] transition-all duration-300 shadow-lg"
                 >
-                  {/* Imagen */}
                   <div className="relative overflow-hidden h-56">
                     <img
-                      src={producto.imagenUrl?.split(", ")[0] || "https://via.placeholder.com/400x300?text=Sin+imagen"}
+                      src={obtenerPrimeraImagen(producto.imagenUrl)}
                       alt={producto.nombre}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 cursor-pointer"
                       onError={(e) => { e.target.src = "https://via.placeholder.com/400x300?text=Sin+imagen"; }}
+                      onClick={() => onOpenModal && onOpenModal(producto)}
+                      data-testid={`card-image-${producto.id}`}
                     />
-                    {/* Badge categoría */}
                     {producto.categoria && (
                       <span className="absolute top-3 left-3 bg-purple-600/80 backdrop-blur text-white text-xs px-3 py-1 rounded-full">
                         {producto.categoria}
@@ -117,14 +104,10 @@ function FeaturedProducts() {
                   </div>
 
                   <div className="p-5">
-                    <h3 className="text-white font-semibold text-lg leading-tight">
-                      {producto.nombre}
-                    </h3>
+                    <h3 className="text-white font-semibold text-lg leading-tight">{producto.nombre}</h3>
 
                     <div className="flex items-center justify-between mt-2">
-                      <p className="text-yellow-400 font-black text-xl">
-                        ${producto.precio}
-                      </p>
+                      <p className="text-yellow-400 font-black text-xl">${Number(producto.precio || 0).toFixed(2)}</p>
                       {producto.stock > 0 ? (
                         <span className="text-green-400 text-xs">✓ Disponible</span>
                       ) : (
@@ -132,7 +115,11 @@ function FeaturedProducts() {
                       )}
                     </div>
 
-                    <button className="w-full mt-4 bg-purple-600 hover:bg-purple-500 text-white py-2.5 rounded-2xl text-sm font-semibold transition">
+                    <button
+                      className="w-full mt-4 bg-purple-600 hover:bg-purple-500 text-white py-2.5 rounded-2xl text-sm font-semibold transition cursor-pointer"
+                      onClick={() => onOpenModal && onOpenModal(producto)}
+                      data-testid={`card-btn-${producto.id}`}
+                    >
                       Ver Producto
                     </button>
                   </div>
@@ -141,7 +128,6 @@ function FeaturedProducts() {
             </div>
           )}
 
-          {/* Botón ver más */}
           {!cargando && productos.length > 0 && (
             <div className="text-center mt-12">
               <button className="border border-white/20 text-gray-300 hover:bg-white/10 px-8 py-3 rounded-2xl transition text-sm font-semibold">
@@ -152,7 +138,6 @@ function FeaturedProducts() {
         </div>
       </section>
 
-      {/* ── FEATURES ── */}
       <section className="py-20 px-6 bg-white/[0.02] border-y border-white/10">
         <div className="max-w-7xl mx-auto grid md:grid-cols-4 gap-8 text-center">
           {[
@@ -170,29 +155,19 @@ function FeaturedProducts() {
         </div>
       </section>
 
-      {/* ── VALORACIONES ── */}
       <section className="py-28 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-black text-white">
-              VALORACIONES
-            </h2>
+            <h2 className="text-4xl md:text-5xl font-black text-white">VALORACIONES</h2>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
             {valoraciones.map((v) => (
-              <div
-                key={v.nombre}
-                className="bg-white/5 border border-white/10 rounded-3xl p-8 hover:border-purple-500/30 transition"
-              >
+              <div key={v.nombre} className="bg-white/5 border border-white/10 rounded-3xl p-8 hover:border-purple-500/30 transition">
                 <Estrellas cantidad={v.estrellas} />
-                <p className="text-gray-300 mt-4 leading-relaxed text-sm">
-                  "{v.texto}"
-                </p>
+                <p className="text-gray-300 mt-4 leading-relaxed text-sm">"{v.texto}"</p>
                 <div className="flex items-center gap-3 mt-6">
-                  <div className="w-9 h-9 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold text-sm">
-                    {v.avatar}
-                  </div>
+                  <div className="w-9 h-9 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold text-sm">{v.avatar}</div>
                   <div>
                     <p className="text-white font-semibold text-sm">{v.nombre}</p>
                     <p className="text-green-400 text-xs">✓ Compra verificada</p>
