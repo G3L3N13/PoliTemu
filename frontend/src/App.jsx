@@ -20,7 +20,8 @@ import SellerProfile from "./pages/SellerProfile";
 import ChatPage from "./pages/ChatPage"; // Asegúrate de tener este import si existe
 import Profile from "./pages/Profile";
 import ProductosCatalogo from "./pages/ProductosCatalogo";
-
+// Añade esta línea arriba junto a los otros imports de páginas
+import VerifyEmail from "./pages/VerifyEmail";
 function AppRoutes() {
   return (
     <Routes>
@@ -30,6 +31,7 @@ function AppRoutes() {
       <Route path="/" element={<Layout><Home /></Layout>} />
 
 <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/verify-email" element={<VerifyEmail />} />
       {/* Rutas Privadas (Requieren estar logueado) */}
       <Route path="/home" element={<PrivateRoute><Layout><HomePrivado /></Layout></PrivateRoute>} />
       <Route path="/productos" element={<PrivateRoute><Layout><ProductosCatalogo /></Layout></PrivateRoute>} />

@@ -1,54 +1,158 @@
-import { useState } from "react";
-import { db } from "../../services/firebase";
-import { doc, updateDoc } from "firebase/firestore";
+// src/components/dashboard/DatosPersonalesForm.jsx
+import { useState, useEffect } from "react";
+import { db } from "../../services/firebase"; // Verifica que los niveles de carpeta (../../) sean correctos
+import { doc, setDoc } from "firebase/firestore";
 
-export default function DatosPersonalesForm({ user, fullName, setFullName }) {
-  const [loading, setLoading] = useState(false);
-  const [msg, setMsg] = useState({ type: "", text: "" });
+export default function DatosPersonalesForm({ user, profile }) {
+  // Estados locales para controlar los inputs del formulario
+  const [nombre, setNombre] = useState("");
+  const [email, setEmail] = useState("");
+  const [telefono, setTelefono] = useState("");
+  const [carrera, setCarrera] = useState("");
+  const [biografia, setBiografia] = useState("");
 
-  const handleUpdate = async () => {
-    if (!fullName.trim()) return setMsg({ type: "error", text: "El nombre no puede estar vacío." });
-    
-    setLoading(true);
-    setMsg({ type: "", text: "" });
+  // Estados para el feedback del usuario
+  const [cargando, setCargando] = useState(false);
+  const [mensajeExito, setMensajeExito] = useState("");
+  const [mensajeError, setMensajeError] = useState("");
+
+  // CLAVE: Este useEffect se ejecuta CADA VEZ que el perfil cambia o llega desde Firebase
+  useEffect(() => {
+    if (profile) {
+      setNombre(profile.nombre || user?.displayName || "");
+      setEmail(profile.email || user?.email || "");
+      setTelefono(profile.telefono || "");
+      setCarrera(profile.carrera || "");
+      setBiografia(profile.biografia || "");
+    }
+  }, [profile, user]);
+
+  // Función para guardar los cambios en Firestore
+  const handleGuardar = async (e) => {
+    e.preventDefault(); // Evita que la página se recargue
+    if (!user) return;
+
+    setCargando(true);
+    setMensajeExito("");
+    setMensajeError("");
 
     try {
-      await updateDoc(doc(db, "usuarios", user.uid), { fullName });
-      setMsg({ type: "success", text: "Perfil actualizado correctamente." });
+      const userRef = doc(db, "usuarios", user.uid);
+      
+      // Guardamos o actualizamos los datos usando setDoc con merge: true para no borrar otros campos (como totalVentas)
+      await setDoc(userRef, {
+        nombre,
+        email,
+        telefono,
+        carrera,
+        biografia,
+        uid: user.uid,
+        actualizadoEn: new Date()
+      }, { merge: true });
+
+      setMensajeExito("¡Datos personales actualizados correctamente!");
+      
+      // Borrar el mensaje de éxito después de 4 segundos
+      setTimeout(() => setMensajeExito(""), 4000);
     } catch (error) {
-      setMsg({ type: "error", text: "Error al actualizar el perfil." });
+      console.error("Error al guardar en Firestore:", error);
+      setMensajeError("Hubo un error al guardar los cambios. Intenta de nuevo.");
     } finally {
-      setLoading(false);
+      setCargando(false);
     }
   };
 
   return (
-    <div className="bg-white/5 border border-white/10 backdrop-blur-lg rounded-3xl p-8 shadow-xl">
-      <h2 className="text-2xl font-black text-white mb-6">Datos Personales</h2>
-      
-      <div className="mb-5">
-        <label className="block text-sm text-gray-300 mb-2 font-medium">Nombre completo</label>
-        <input 
-          className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 transition"
-          value={fullName} 
-          onChange={(e) => setFullName(e.target.value)} 
-          placeholder="Tu nombre completo"
-        />
-      </div>
+    <div className="bg-white/5 border border-white/10 backdrop-blur-lg p-8 rounded-3xl w-full shadow-2xl text-white">
+      <h2 className="text-2xl font-black mb-1">Datos Personales</h2>
+      <p className="text-gray-400 mb-6 text-sm">Actualiza tu información pública de vendedor en PoliTemu.</p>
 
-      <button 
-        onClick={handleUpdate} 
-        disabled={loading}
-        className="w-full bg-purple-600 hover:bg-purple-500 text-white py-4 rounded-2xl font-bold transition disabled:opacity-50"
-      >
-        {loading ? "Guardando..." : "Guardar cambios"}
-      </button>
-
-      {msg.text && (
-        <div className={`mt-5 p-4 rounded-2xl text-sm border ${msg.type === "success" ? "bg-green-500/10 border-green-500/20 text-green-400" : "bg-red-500/10 border-red-500/20 text-red-400"}`}>
-          {msg.text}
+      {/* Alertas de Feedback */}
+      {mensajeError && (
+        <div className="bg-red-500/20 border border-red-500/40 text-red-300 p-4 rounded-xl mb-4 text-sm text-center">
+          {mensajeError}
         </div>
       )}
+      {mensajeExito && (
+        <div className="bg-green-500/20 border border-green-500/40 text-green-300 p-4 rounded-xl mb-4 text-sm text-center">
+          {mensajeExito}
+        </div>
+      )}
+
+      <form onSubmit={handleGuardar} className="space-y-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {/* Input Nombre */}
+          <div>
+            <label className="block text-xs text-purple-300 mb-2 font-medium">Nombre Completo</label>
+            <input
+              type="text"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              placeholder="Tu nombre"
+              className="w-full bg-white/10 border border-white/10 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-purple-500 outline-none transition"
+              required
+            />
+          </div>
+
+          {/* Input Email (Deshabilitado porque es tu cuenta de acceso) */}
+          <div>
+            <label className="block text-xs text-gray-400 mb-2 font-medium">Correo Institucional (No modificable)</label>
+            <input
+              type="email"
+              value={email}
+              disabled
+              className="w-full bg-white/5 border border-white/5 rounded-2xl px-4 py-3 text-sm text-gray-400 outline-none cursor-not-allowed"
+            />
+          </div>
+
+          {/* Input Teléfono */}
+          <div>
+            <label className="block text-xs text-purple-300 mb-2 font-medium">Número de Teléfono / WhatsApp</label>
+            <input
+              type="tel"
+              value={telefono}
+              onChange={(e) => setTelefono(e.target.value)}
+              placeholder="Ej: 0987654321"
+              className="w-full bg-white/10 border border-white/10 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-purple-500 outline-none transition"
+            />
+          </div>
+
+          {/* Input Carrera */}
+          <div>
+            <label className="block text-xs text-purple-300 mb-2 font-medium">Facultad / Carrera (EPN)</label>
+            <input
+              type="text"
+              value={carrera}
+              onChange={(e) => setCarrera(e.target.value)}
+              placeholder="Ej: Ingeniería en Sistemas"
+              className="w-full bg-white/10 border border-white/10 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-purple-500 outline-none transition"
+            />
+          </div>
+        </div>
+
+        {/* Input Biografía */}
+        <div>
+          <label className="block text-xs text-purple-300 mb-2 font-medium">Biografía del Vendedor</label>
+          <textarea
+            value={biografia}
+            onChange={(e) => setBiografia(e.target.value)}
+            placeholder="Cuéntale a la comunidad qué vendes, tus horarios de entrega en el campus, etc..."
+            rows="3"
+            className="w-full bg-white/10 border border-white/10 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-purple-500 outline-none transition resize-none"
+          />
+        </div>
+
+        {/* Botón Guardar Cambios */}
+        <div className="flex justify-end pt-2">
+          <button
+            type="submit"
+            disabled={cargando}
+            className="w-full md:w-auto bg-yellow-400 hover:bg-yellow-300 disabled:opacity-50 text-blue-950 font-black px-8 py-3 rounded-2xl transition shadow-lg shadow-yellow-400/10 active:scale-[0.98]"
+          >
+            {cargando ? "Guardando cambios..." : "Guardar Cambios"}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

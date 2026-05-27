@@ -12,31 +12,59 @@ function Profile() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("perfil");
-  const [profile, setProfile] = useState(null);
+  
+  // CORRECCIÓN: Inicializar con un objeto vacío estructurado para evitar errores de lectura 'undefined' en los inputs
+  const [profile, setProfile] = useState({
+    nombre: "",
+    email: "",
+    telefono: "",
+    carrera: "",
+    biografia: ""
+  });
+  const [cargandoPerfil, setCargandoPerfil] = useState(true);
   const [misProductos, setMisProductos] = useState([]);
   const [cargandoProductos, setCargandoProductos] = useState(false);
 
+  // 1. Escuchar perfil del usuario en Firestore de manera segura
   useEffect(() => {
     if (!user) {
-      setProfile(null);
+      setCargandoPerfil(false);
       return;
     }
 
+    setCargandoPerfil(true);
     const ref = doc(db, "usuarios", user.uid);
+    
     const unsub = onSnapshot(ref, (snap) => {
       if (snap.exists()) {
-        setProfile({ id: snap.id, ...snap.data() });
+        // Combinamos lo que hay en Firestore con los datos base de Firebase Auth por seguridad
+        setProfile({
+          id: snap.id,
+          nombre: user.displayName || "",
+          email: user.email || "",
+          ...snap.data()
+        });
       } else {
-        setProfile({ id: user.uid, nombre: user.displayName || "", email: user.email || "" });
+        // Si el documento no existe en Firestore, estructuramos el estado con lo que ofrece Auth
+        setProfile({ 
+          id: user.uid, 
+          nombre: user.displayName || "", 
+          email: user.email || "",
+          telefono: "",
+          carrera: "",
+          biografia: ""
+        });
       }
+      setCargandoPerfil(false);
     }, (err) => {
       console.error("Error escuchando perfil:", err);
+      setCargandoPerfil(false);
     });
 
     return () => unsub();
   }, [user]);
 
-  // Cargar productos del usuario
+  // 2. Cargar productos del usuario
   useEffect(() => {
     const cargarMisProductos = async () => {
       if (!user) return;
@@ -59,7 +87,8 @@ function Profile() {
       }
     };
 
-    if (activeTab === "productos") {
+    // Cargamos la métrica de productos de fondo para el "Resumen de Vendedor" incluso si estamos en la pestaña perfil
+    if (user) {
       cargarMisProductos();
     }
   }, [user, activeTab]);
@@ -122,7 +151,15 @@ function Profile() {
         {/* PERFIL */}
         {activeTab === "perfil" && (
           <div>
-            <DatosPersonalesForm user={user} profile={profile} />
+            {cargandoPerfil ? (
+              <div className="text-center py-10 text-gray-400">
+                <div className="animate-spin w-10 h-10 border-4 border-purple-600 border-t-yellow-400 rounded-full mx-auto mb-4"></div>
+                <p>Cargando datos personales...</p>
+              </div>
+            ) : (
+              <DatosPersonalesForm user={user} profile={profile} />
+            )}
+            
             <div className="mt-6 p-6 bg-white/5 rounded-2xl border border-white/10">
               <h3 className="text-lg font-semibold text-white mb-4">Resumen de Vendedor</h3>
               <div className="grid grid-cols-3 gap-4">
