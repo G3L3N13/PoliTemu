@@ -3,6 +3,10 @@ import { AuthProvider } from "./context/AuthContext";
 import Layout from "./components/Layout";
 import PrivateRoute from "./components/PrivateRoute";
 import AdminRoute from "./components/AdminRoute";
+// Importa el componente
+import ForgotPassword from "./pages/ForgotPassword";
+
+// Dentro de tu <Routes>:
 
 // Pages
 import Home from "./pages/Home";
@@ -25,6 +29,7 @@ function AppRoutes() {
       <Route path="/register" element={<Register />} />
       <Route path="/" element={<Layout><Home /></Layout>} />
 
+<Route path="/forgot-password" element={<ForgotPassword />} />
       {/* Rutas Privadas (Requieren estar logueado) */}
       <Route path="/home" element={<PrivateRoute><Layout><HomePrivado /></Layout></PrivateRoute>} />
       <Route path="/productos" element={<PrivateRoute><Layout><ProductosCatalogo /></Layout></PrivateRoute>} />
