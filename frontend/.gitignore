@@ -1,0 +1,7 @@
+.vercel
+.env*
+backend/config/serviceAccountKey.json
+.vercel
+
+.vercel
+.env*
