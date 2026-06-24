@@ -19,9 +19,13 @@ function Estrellas({ cantidad }) {
 }
 
 function FeaturedProducts({ onOpenModal }) {
+  // Guardamos todos los productos de la base de datos sin cortarlos rígidamente
   const [productos, setProductos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
+
+  // 🔥 ESTADO NUEVO: Controla cuántos productos se muestran (inicia en 4)
+  const [limiteVisible, setLimiteVisible] = useState(4);
 
   const obtenerPrimeraImagen = (imagenUrl) => {
     if (!imagenUrl) return "https://via.placeholder.com/400x300?text=Sin+imagen";
@@ -34,8 +38,9 @@ function FeaturedProducts({ onOpenModal }) {
     const cargar = async () => {
       try {
         const data = await productosService.getTodos();
+        // 🔥 CORRECCIÓN: Guardamos todo el arreglo mapeando los IDs correctamente
         const items = Array.isArray(data)
-          ? data.slice(0, 4).map(p => ({ id: p._id || p.id, ...p }))
+          ? data.map(p => ({ id: p._id || p.id, ...p }))
           : [];
         setProductos(items);
       } catch (err) {
@@ -47,6 +52,14 @@ function FeaturedProducts({ onOpenModal }) {
     };
     cargar();
   }, []);
+
+  // 🔥 FUNCIÓN NUEVA: Sumar 4 productos adicionales al hacer click
+  const cargarMasProductos = () => {
+    setLimiteVisible((prev) => prev + 4);
+  };
+
+  // Obtenemos dinámicamente el subconjunto de productos usando el límite actual
+  const productosVisibles = productos.slice(0, limiteVisible);
 
   return (
     <>
@@ -61,7 +74,7 @@ function FeaturedProducts({ onOpenModal }) {
 
           {cargando && (
             <div className="grid md:grid-cols-4 gap-6">
-              {[1,2,3,4].map(i => (
+              {[1, 2, 3, 4].map(i => (
                 <div key={i} className="bg-white/5 rounded-3xl overflow-hidden animate-pulse">
                   <div className="h-56 bg-white/10" />
                   <div className="p-5 space-y-3">
@@ -82,7 +95,8 @@ function FeaturedProducts({ onOpenModal }) {
 
           {!cargando && !error && productos.length > 0 && (
             <div className="grid md:grid-cols-4 gap-6">
-              {productos.map((producto) => (
+              {/* Mapeamos únicamente los productos visibles autorizados */}
+              {productosVisibles.map((producto) => (
                 <div
                   key={producto.id}
                   className="group bg-white/5 border border-white/10 backdrop-blur-lg rounded-3xl overflow-hidden hover:border-purple-500/40 hover:scale-[1.02] transition-all duration-300 shadow-lg"
@@ -128,9 +142,13 @@ function FeaturedProducts({ onOpenModal }) {
             </div>
           )}
 
-          {!cargando && productos.length > 0 && (
+          {/* 🔥 BOTÓN DINÁMICO RECONFIGURADO: Solo aparece si quedan más productos ocultos por renderizar */}
+          {!cargando && productos.length > limiteVisible && (
             <div className="text-center mt-12">
-              <button className="border border-white/20 text-gray-300 hover:bg-white/10 px-8 py-3 rounded-2xl transition text-sm font-semibold">
+              <button 
+                onClick={cargarMasProductos}
+                className="border border-white/20 text-gray-300 hover:bg-white/10 px-8 py-3 rounded-2xl transition text-sm font-semibold cursor-pointer"
+              >
                 Ver más productos
               </button>
             </div>

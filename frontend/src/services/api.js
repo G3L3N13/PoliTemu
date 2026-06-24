@@ -12,7 +12,6 @@ API.interceptors.request.use(
 
     if (user) {
       const token = await user.getIdToken();
-
       config.headers.Authorization = `Bearer ${token}`;
     }
 
@@ -22,19 +21,39 @@ API.interceptors.request.use(
 );
 
 export const productosService = {
+  // Lista de todos los productos (Pública)
   getTodos: async () => {
     const respuesta = await API.get("/productos");
     return respuesta.data;
   },
 
+  // Obtener solo mis productos (Requiere Auth)
+  getMisProductos: async () => {
+    const respuesta = await API.get("/productos/vendedor/mis-productos");
+    return respuesta.data;
+  },
+
+  // Registrar producto (Requiere Auth)
   registrar: async (datosProducto) => {
     const respuesta = await API.post("/productos", datosProducto);
+    return respuesta.data;
+  },
+
+  // Actualizar producto (Requiere Auth)
+  actualizar: async (id, datos) => {
+    const respuesta = await API.put(`/productos/${id}`, datos);
+    return respuesta.data;
+  },
+
+  // Eliminar producto (Requiere Auth)
+  eliminar: async (id) => {
+    const respuesta = await API.delete(`/productos/${id}`);
     return respuesta.data;
   },
 };
 
 export const usuariosService = {
-  obtenerMiPerfil: async (config ={}) => {
+  obtenerMiPerfil: async (config = {}) => {
     const respuesta = await API.get("/usuarios/profile/me", config);
     return respuesta.data;
   },
@@ -62,19 +81,12 @@ export const carritoService = {
   },
 
   actualizar: async (productoId, cantidad) => {
-    const response = await API.put(
-      `/carrito/${productoId}`,
-      { cantidad }
-    );
-
+    const response = await API.put(`/carrito/${productoId}`, { cantidad });
     return response.data;
   },
 
   eliminar: async (productoId) => {
-    const response = await API.delete(
-      `/carrito/${productoId}`
-    );
-
+    const response = await API.delete(`/carrito/${productoId}`);
     return response.data;
   },
 

@@ -5,7 +5,11 @@ import PrivateRoute from "./components/PrivateRoute";
 import AdminRoute from "./components/AdminRoute";
 // Importa el componente
 import ForgotPassword from "./pages/ForgotPassword";
+// Ejemplo en App.js
+import EditarProducto from "./pages/EditarProducto"; // O donde lo vayas a guardar
 
+// ... dentro de tu <Routes>
+<Route path="/editar-producto/:id" element={<EditarProducto />} />
 // Dentro de tu <Routes>:
 
 // Pages
@@ -45,6 +49,16 @@ function AppRoutes() {
       <Route path="/chat/:vendedorId" element={<PrivateRoute><Layout><ChatPage /></Layout></PrivateRoute>} />
       <Route path="/carrito" element={<PrivateRoute><Layout><Carrito /></Layout></PrivateRoute>} />
       <Route path="/ofertas" element={<PrivateRoute><Layout><Ofertas /></Layout></PrivateRoute>} />
+      <Route 
+  path="/editar-producto/:id" 
+  element={
+    <PrivateRoute>
+      <Layout>
+        <EditarProducto />
+      </Layout>
+    </PrivateRoute>
+  } 
+/>
       {/* Rutas Admin (Requieren ser admin) */}
       <Route path="/dashboard" element={<AdminRoute><Layout><Dashboard /></Layout></AdminRoute>} />
       <Route path="/admin" element={<AdminRoute><Layout><AdminProductos /></Layout></AdminRoute>} />
