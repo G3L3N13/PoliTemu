@@ -1,7 +1,6 @@
 // src/components/dashboard/DatosPersonalesForm.jsx
 import { useState, useEffect } from "react";
-import { db } from "../../services/firebase"; // Verifica que los niveles de carpeta (../../) sean correctos
-import { doc, setDoc } from "firebase/firestore";
+import { usuariosService } from "../../services/api";
 
 export default function DatosPersonalesForm({ user, profile }) {
   // Estados locales para controlar los inputs del formulario
@@ -9,7 +8,7 @@ export default function DatosPersonalesForm({ user, profile }) {
   const [email, setEmail] = useState("");
   const [telefono, setTelefono] = useState("");
   const [carrera, setCarrera] = useState("");
-  const [biografia, setBiografia] = useState("");
+  const [descripcion, setDescripcion] = useState("");
 
   // Estados para el feedback del usuario
   const [cargando, setCargando] = useState(false);
@@ -23,7 +22,7 @@ export default function DatosPersonalesForm({ user, profile }) {
       setEmail(profile.email || user?.email || "");
       setTelefono(profile.telefono || "");
       setCarrera(profile.carrera || "");
-      setBiografia(profile.biografia || "");
+      setDescripcion(profile.descripcion || "");
     }
   }, [profile, user]);
 
@@ -37,21 +36,24 @@ export default function DatosPersonalesForm({ user, profile }) {
     setMensajeError("");
 
     try {
-      const userRef = doc(db, "usuarios", user.uid);
-      
-      // Guardamos o actualizamos los datos usando setDoc con merge: true para no borrar otros campos (como totalVentas)
-      await setDoc(userRef, {
-        nombre,
-        email,
-        telefono,
-        carrera,
-        biografia,
-        uid: user.uid,
-        actualizadoEn: new Date()
-      }, { merge: true });
+      const token = await user.getIdToken();
+
+      await usuariosService.actualizarPerfil(
+        {
+          nombre,
+          telefono,
+          carrera,
+          descripcion
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
 
       setMensajeExito("¡Datos personales actualizados correctamente!");
-      
+
       // Borrar el mensaje de éxito después de 4 segundos
       setTimeout(() => setMensajeExito(""), 4000);
     } catch (error) {
@@ -134,8 +136,8 @@ export default function DatosPersonalesForm({ user, profile }) {
         <div>
           <label className="block text-xs text-purple-300 mb-2 font-medium">Biografía del Vendedor</label>
           <textarea
-            value={biografia}
-            onChange={(e) => setBiografia(e.target.value)}
+            value={descripcion}
+            onChange={(e) => setDescripcion(e.target.value)}
             placeholder="Cuéntale a la comunidad qué vendes, tus horarios de entrega en el campus, etc..."
             rows="3"
             className="w-full bg-white/10 border border-white/10 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-purple-500 outline-none transition resize-none"

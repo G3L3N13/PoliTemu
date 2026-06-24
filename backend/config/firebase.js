@@ -1,10 +1,7 @@
-import fs from "fs";
 import admin from "firebase-admin";
-
-// Leer el archivo JSON manualmente
-const serviceAccount = JSON.parse(
-  fs.readFileSync(new URL("./serviceAccountKey.json", import.meta.url))
-);
+import "dotenv/config";
+// Leer el JSON desde la variable de entorno
+const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
 if (!admin.apps.length) {
   admin.initializeApp({

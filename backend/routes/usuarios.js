@@ -16,19 +16,6 @@ router.get("/", async (req, res) => {
   }
 });
 
-// Obtener usuario por ID
-router.get("/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const doc = await db.collection("usuarios").doc(id).get();
-    if (!doc.exists) return res.status(404).json({ error: "Usuario no encontrado" });
-    res.json({ id: doc.id, ...doc.data() });
-  } catch (error) {
-    console.error("Error al obtener usuario:", error);
-    res.status(500).json({ error: "Error al obtener usuario" });
-  }
-});
-
 // Obtener perfil del usuario autenticado
 router.get("/profile/me", verificarFirebaseToken, async (req, res) => {
   try {
@@ -45,6 +32,20 @@ router.get("/profile/me", verificarFirebaseToken, async (req, res) => {
     res.status(500).json({ error: "Error al obtener perfil del usuario" });
   }
 });
+
+// Obtener usuario por ID
+router.get("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const doc = await db.collection("usuarios").doc(id).get();
+    if (!doc.exists) return res.status(404).json({ error: "Usuario no encontrado" });
+    res.json({ id: doc.id, ...doc.data() });
+  } catch (error) {
+    console.error("Error al obtener usuario:", error);
+    res.status(500).json({ error: "Error al obtener usuario" });
+  }
+});
+
 
 // Crear o actualizar perfil de usuario (al registrarse o completar datos)
 router.post("/profile/create", verificarFirebaseToken, async (req, res) => {
@@ -82,7 +83,10 @@ router.post("/profile/create", verificarFirebaseToken, async (req, res) => {
       calificacion: 0,
       totalVentas: 0,
       totalCompras: 0,
-      productosPuhlicados: 0,
+      productosPublicados: 0,
+      productosPublicado: [],
+      favoritosIds: [],
+      carrito: [],
       fechaRegistro: new Date().toISOString(),
       verificado: false,
       estado: "activo"
@@ -202,13 +206,13 @@ router.get("/role", verificarFirebaseToken, async (req, res) => {
     if (!uid) return res.status(400).json({ error: "Usuario no autenticado" });
 
     // Opción A: si guardas rol en colección users
-    const userDoc = await db.collection("users").doc(uid).get();
+    const userDoc = await db.collection("usuarios").doc(uid).get();
     if (!userDoc.exists) {
       // Si no existe, asumimos no admin
       return res.json({ isAdmin: false });
     }
     const userData = userDoc.data();
-    const isAdmin = Boolean(userData?.role === "admin" || userData?.isAdmin);
+    const isAdmin = Boolean(userData?.role === "admin" || userData?.isAdmin); //
 
     return res.json({ isAdmin });
   } catch (err) {

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { productosService } from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import { carritoService } from "../services/api";
 
 function ProductPage() {
   const { id } = useParams();
@@ -12,6 +13,20 @@ function ProductPage() {
   const [error, setError] = useState(null);
   const [indiceFoto, setIndiceFoto] = useState(0);
   const [cantidad, setCantidad] = useState(1);
+
+  const agregarAlCarrito = async () => {
+    try {
+      await carritoService.agregar({
+        productoId: producto._id || producto.id,
+        cantidad,
+      });
+
+      alert("Producto agregado al carrito");
+    } catch (error) {
+      console.error(error);
+      alert("Error al agregar al carrito");
+    }
+  };
 
   useEffect(() => {
     const cargarProducto = async () => {
@@ -115,11 +130,10 @@ function ProductPage() {
                   <button
                     key={idx}
                     onClick={() => setIndiceFoto(idx)}
-                    className={`w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 border-2 transition ${
-                      idx === indiceFoto
+                    className={`w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 border-2 transition ${idx === indiceFoto
                         ? "border-yellow-400"
                         : "border-white/10 hover:border-white/30"
-                    }`}
+                      }`}
                   >
                     <img src={img} alt={`Miniatura ${idx + 1}`} className="w-full h-full object-cover" />
                   </button>
@@ -190,6 +204,7 @@ function ProductPage() {
               )}
 
               <button
+                onClick={agregarAlCarrito}
                 disabled={producto.stock === 0}
                 className="w-full bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed text-white py-4 rounded-2xl font-bold text-lg transition shadow-lg shadow-purple-600/30"
               >

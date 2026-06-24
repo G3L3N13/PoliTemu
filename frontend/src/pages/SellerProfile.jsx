@@ -1,8 +1,7 @@
 // src/pages/SellerProfile.jsx
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { db } from "../services/firebase";
-import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+import axios from "axios";
 import { productosService } from "../services/api";
 
 function SellerProfile() {
@@ -14,39 +13,47 @@ function SellerProfile() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const cargarDatos = async () => {
-      try {
-        // Cargar datos del vendedor
-        const vendedorRef = doc(db, "usuarios", vendedorId);
-        const vendedorSnap = await getDoc(vendedorRef);
-        
-        if (vendedorSnap.exists()) {
-          setVendedor({ id: vendedorSnap.id, ...vendedorSnap.data() });
-        } else {
-          setError("Vendedor no encontrado");
-        }
+    let mounted = true;
 
-        // Cargar productos del vendedor
+    const cargarDatos = async () => {
+      setCargando(true);
+      setError(null);
+
+      try {
+        // Cargar datos del vendedor desde backend público
+        const base = import.meta.env.VITE_API_URL || "";
+        const { data } = await axios.get(`${base}/api/usuarios/${vendedorId}`);
+        if (!mounted) return;
+        setVendedor(data);
+
+        // Cargar productos del vendedor (usa tu servicio centralizado)
         const todosProductos = await productosService.getTodos();
         const productosVendedor = Array.isArray(todosProductos)
-          ? todosProductos.filter(p => p.vendedorId === vendedorId && p.estado === "activo")
+          ? todosProductos.filter(p => String(p.vendedorId) === String(vendedorId) && p.estado === "activo")
           : [];
+        if (!mounted) return;
         setProductos(productosVendedor);
       } catch (err) {
         console.error("Error al cargar datos del vendedor:", err);
+        if (!mounted) return;
         setError("Error al cargar el perfil del vendedor");
       } finally {
+        if (!mounted) return;
         setCargando(false);
       }
     };
 
     if (vendedorId) cargarDatos();
+
+    return () => {
+      mounted = false;
+    };
   }, [vendedorId]);
 
   const obtenerPrimeraImagen = (imagenUrl) => {
     if (!imagenUrl) return "/placeholder.png";
-    if (Array.isArray(imagenUrl)) return imagenUrl[0];
-    const urls = imagenUrl.split(",").map(u => u.trim()).filter(Boolean);
+    if (Array.isArray(imagenUrl) && imagenUrl.length > 0) return imagenUrl[0];
+    const urls = String(imagenUrl).split(",").map(u => u.trim()).filter(Boolean);
     return urls[0] || "/placeholder.png";
   };
 
@@ -81,7 +88,6 @@ function SellerProfile() {
   return (
     <div className="min-h-screen bg-[#0a0a1a] text-white px-6 py-10">
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
         <button
           onClick={() => navigate(-1)}
           className="text-gray-400 hover:text-white mb-8 flex items-center gap-2 transition"
@@ -89,40 +95,36 @@ function SellerProfile() {
           ← Atrás
         </button>
 
-        {/* Información del vendedor */}
         <div className="bg-gradient-to-br from-purple-600/20 to-blue-900/20 border border-white/10 rounded-3xl p-8 mb-12">
           <div className="flex items-start gap-6">
             <div className="w-32 h-32 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-5xl font-bold text-white flex-shrink-0">
-              {(vendedor.fullName || vendedor.nombre || "V")[0].toUpperCase()}
+              {((vendedor.fullName || vendedor.nombre || "V")[0] || "V").toUpperCase()}
             </div>
-            
+
             <div className="flex-1">
               <h1 className="text-5xl font-black text-white mb-2">
                 {vendedor.fullName || vendedor.nombre}
               </h1>
               <p className="text-gray-400 text-lg mb-4">{vendedor.descripcion || "Sin descripción"}</p>
-              
+
               <div className="grid grid-cols-3 gap-4 mb-6">
                 <div>
                   <p className="text-3xl font-black text-yellow-400">{productos.length}</p>
                   <p className="text-gray-400">Productos</p>
                 </div>
                 <div>
-                  <p className="text-3xl font-black text-green-400">{vendedor.totalVentas || 0}</p>
+                  <p className="text-3xl font-black text-green-400">{vendedor.totalVentas ?? 0}</p>
                   <p className="text-gray-400">Ventas</p>
                 </div>
                 <div>
-                  <p className="text-3xl font-black text-cyan-400">⭐ {(vendedor.calificacionPromedio || 0).toFixed(1)}</p>
+                  <p className="text-3xl font-black text-cyan-400">⭐ {Number(vendedor.calificacionPromedio ?? 0).toFixed(1)}</p>
                   <p className="text-gray-400">Calificación</p>
                 </div>
               </div>
 
               <div className="flex gap-3">
                 <button
-                  onClick={() => {
-                    // TODO: Crear chat
-                    alert("Chat pronto disponible");
-                  }}
+                  onClick={() => alert("Chat pronto disponible")}
                   className="bg-cyan-500 hover:bg-cyan-400 text-black px-6 py-3 rounded-2xl font-bold transition"
                 >
                   💬 Contactar
@@ -131,7 +133,6 @@ function SellerProfile() {
             </div>
           </div>
 
-          {/* Información de contacto */}
           <div className="mt-8 pt-8 border-t border-white/10">
             <p className="text-gray-400 mb-2">📍 <strong>{vendedor.ciudad || "No especificado"}</strong></p>
             <p className="text-gray-400 mb-2">📞 <strong>{vendedor.telefono || "No disponible"}</strong></p>
@@ -139,7 +140,6 @@ function SellerProfile() {
           </div>
         </div>
 
-        {/* Productos del vendedor */}
         <div>
           <h2 className="text-4xl font-black text-white mb-8">
             Productos de <span className="text-yellow-400">{vendedor.fullName || vendedor.nombre}</span>

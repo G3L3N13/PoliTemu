@@ -1,81 +1,30 @@
 // src/pages/Profile.jsx
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
-import { db } from "../services/firebase";
-import { doc, onSnapshot } from "firebase/firestore";
-import { productosService } from "../services/api";
+import { productosService, usuariosService } from "../services/api";
 import DatosPersonalesForm from "../components/dashboard/DatosPersonalesForm.jsx";
 import AdminProducts from "./AdminProductos.jsx";
 import { useNavigate } from "react-router-dom";
 
 function Profile() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [activeTab, setActiveTab] = useState("perfil");
-  
-  // CORRECCIÓN: Inicializar con un objeto vacío estructurado para evitar errores de lectura 'undefined' en los inputs
-  const [profile, setProfile] = useState({
-    nombre: "",
-    email: "",
-    telefono: "",
-    carrera: "",
-    biografia: ""
-  });
+
   const [cargandoPerfil, setCargandoPerfil] = useState(true);
   const [misProductos, setMisProductos] = useState([]);
   const [cargandoProductos, setCargandoProductos] = useState(false);
-
-  // 1. Escuchar perfil del usuario en Firestore de manera segura
-  useEffect(() => {
-    if (!user) {
-      setCargandoPerfil(false);
-      return;
-    }
-
-    setCargandoPerfil(true);
-    const ref = doc(db, "usuarios", user.uid);
-    
-    const unsub = onSnapshot(ref, (snap) => {
-      if (snap.exists()) {
-        // Combinamos lo que hay en Firestore con los datos base de Firebase Auth por seguridad
-        setProfile({
-          id: snap.id,
-          nombre: user.displayName || "",
-          email: user.email || "",
-          ...snap.data()
-        });
-      } else {
-        // Si el documento no existe en Firestore, estructuramos el estado con lo que ofrece Auth
-        setProfile({ 
-          id: user.uid, 
-          nombre: user.displayName || "", 
-          email: user.email || "",
-          telefono: "",
-          carrera: "",
-          biografia: ""
-        });
-      }
-      setCargandoPerfil(false);
-    }, (err) => {
-      console.error("Error escuchando perfil:", err);
-      setCargandoPerfil(false);
-    });
-
-    return () => unsub();
-  }, [user]);
-
+  
+  console.log("PROFILE CONTEXT:", profile);
   // 2. Cargar productos del usuario
   useEffect(() => {
     const cargarMisProductos = async () => {
       if (!user) return;
-      
+
       try {
         setCargandoProductos(true);
-        const token = await user.getIdToken(true);
-        const todosProductos = await productosService.getTodos({
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
+        const todosProductos = await productosService.getTodos();
+
         const productos = Array.isArray(todosProductos)
           ? todosProductos.filter(p => p.vendedorId === user.uid)
           : [];
@@ -107,41 +56,36 @@ function Profile() {
 
         <button
           onClick={() => setActiveTab("perfil")}
-          className={`p-4 rounded-xl text-left transition ${
-            activeTab === "perfil" ? "bg-purple-600" : "bg-white/5 hover:bg-white/10"
-          }`}
+          className={`p-4 rounded-xl text-left transition ${activeTab === "perfil" ? "bg-purple-600" : "bg-white/5 hover:bg-white/10"
+            }`}
         >
           👤 Perfil
         </button>
         <button
           onClick={() => setActiveTab("productos")}
-          className={`p-4 rounded-xl text-left transition ${
-            activeTab === "productos" ? "bg-purple-600" : "bg-white/5 hover:bg-white/10"
-          }`}
+          className={`p-4 rounded-xl text-left transition ${activeTab === "productos" ? "bg-purple-600" : "bg-white/5 hover:bg-white/10"
+            }`}
         >
           📦 Mis Productos
         </button>
         <button
           onClick={() => setActiveTab("favoritos")}
-          className={`p-4 rounded-xl text-left transition ${
-            activeTab === "favoritos" ? "bg-purple-600" : "bg-white/5 hover:bg-white/10"
-          }`}
+          className={`p-4 rounded-xl text-left transition ${activeTab === "favoritos" ? "bg-purple-600" : "bg-white/5 hover:bg-white/10"
+            }`}
         >
           ❤️ Favoritos
         </button>
         <button
           onClick={() => setActiveTab("ventas")}
-          className={`p-4 rounded-xl text-left transition ${
-            activeTab === "ventas" ? "bg-purple-600" : "bg-white/5 hover:bg-white/10"
-          }`}
+          className={`p-4 rounded-xl text-left transition ${activeTab === "ventas" ? "bg-purple-600" : "bg-white/5 hover:bg-white/10"
+            }`}
         >
           💳 Mis Ventas
         </button>
         <button
           onClick={() => setActiveTab("vender")}
-          className={`p-4 rounded-xl text-left font-bold transition ${
-            activeTab === "vender" ? "bg-yellow-500 text-black" : "bg-white/5 hover:bg-white/10"
-          }`}
+          className={`p-4 rounded-xl text-left font-bold transition ${activeTab === "vender" ? "bg-yellow-500 text-black" : "bg-white/5 hover:bg-white/10"
+            }`}
         >
           ➕ Vender Producto
         </button>
@@ -151,7 +95,7 @@ function Profile() {
         {/* PERFIL */}
         {activeTab === "perfil" && (
           <div>
-            {cargandoPerfil ? (
+            {!profile ? (
               <div className="text-center py-10 text-gray-400">
                 <div className="animate-spin w-10 h-10 border-4 border-purple-600 border-t-yellow-400 rounded-full mx-auto mb-4"></div>
                 <p>Cargando datos personales...</p>
@@ -159,7 +103,7 @@ function Profile() {
             ) : (
               <DatosPersonalesForm user={user} profile={profile} />
             )}
-            
+
             <div className="mt-6 p-6 bg-white/5 rounded-2xl border border-white/10">
               <h3 className="text-lg font-semibold text-white mb-4">Resumen de Vendedor</h3>
               <div className="grid grid-cols-3 gap-4">
@@ -186,7 +130,7 @@ function Profile() {
             <h2 className="text-3xl font-black text-white mb-8">
               Mis <span className="text-yellow-400">Productos</span>
             </h2>
-            
+
             {cargandoProductos ? (
               <div className="text-center py-20 text-gray-400">
                 <div className="animate-spin w-12 h-12 border-4 border-purple-600 border-t-yellow-400 rounded-full mx-auto mb-4"></div>
@@ -233,11 +177,10 @@ function Profile() {
                       <h3 className="text-white font-semibold text-sm leading-tight line-clamp-2 mb-2">{producto.nombre}</h3>
                       <div className="flex items-center justify-between">
                         <p className="text-yellow-400 font-black text-lg">${Number(producto.precio || 0).toFixed(2)}</p>
-                        <span className={`text-xs px-3 py-1 rounded-full ${
-                          producto.stock > 0
+                        <span className={`text-xs px-3 py-1 rounded-full ${producto.stock > 0
                             ? "bg-green-500/20 text-green-400"
                             : "bg-red-500/20 text-red-400"
-                        }`}>
+                          }`}>
                           {producto.stock > 0 ? `${producto.stock} disponibles` : "Sin stock"}
                         </span>
                       </div>

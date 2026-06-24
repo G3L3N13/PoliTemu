@@ -1,5 +1,17 @@
-﻿backend/config/serviceAccountKey.json
-.vercel
-
-.vercel
+﻿# Carpetas comunes
+node_modules/
+dist/
+.vercel/
 .env*
+.env.local
+.env.production
+
+# Backend
+backend/config/serviceAccountKey.json
+backend/node_modules/
+backend/.env*
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env*

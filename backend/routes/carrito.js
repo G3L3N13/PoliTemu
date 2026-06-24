@@ -24,20 +24,46 @@ router.get("/", async (req, res) => {
 router.post("/", async (req, res) => {
   try {
     const { productoId, cantidad } = req.body;
+
     const carritoRef = db.collection("carritos").doc(req.user.uid);
 
-    await carritoRef.set(
-      { productos: [{ productoId, cantidad }] },
-      { merge: true }
+    const doc = await carritoRef.get();
+
+    let productos = [];
+
+    if (doc.exists) {
+      productos = doc.data().productos || [];
+    }
+
+    const index = productos.findIndex(
+      (p) => p.productoId === productoId
     );
 
-    res.json({ mensaje: "Producto agregado al carrito" });
+    if (index >= 0) {
+      productos[index].cantidad += cantidad;
+    } else {
+      productos.push({
+        productoId,
+        cantidad,
+      });
+    }
+
+    await carritoRef.set({
+      productos,
+    });
+
+    res.json({
+      mensaje: "Producto agregado",
+      productos,
+    });
   } catch (error) {
-    console.error("Error al agregar producto:", error);
-    res.status(500).json({ error: "Error al agregar producto" });
+    console.error(error);
+
+    res.status(500).json({
+      error: "Error al agregar producto",
+    });
   }
 });
-
 // Actualizar cantidad de un producto en el carrito
 router.put("/:productoId", async (req, res) => {
   try {

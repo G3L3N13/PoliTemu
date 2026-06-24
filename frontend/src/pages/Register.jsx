@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { auth, db } from "../services/firebase";
+import { auth } from "../services/firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
 import { useNavigate, Link } from "react-router-dom";
 import buhoImg from "../assets/Buho_tienda.jpeg";
 
@@ -59,33 +58,20 @@ function Register() {
       const userCredential = await createUserWithEmailAndPassword(auth, formData.email.trim(), formData.password);
       const user = userCredential.user;
 
-      // 🔥 Guardar datos completos en Firestore
-      await setDoc(doc(db, "usuarios", user.uid), {
-        // Datos básicos
-        uid: user.uid,
-        fullName: formData.fullName.trim(),
-        email: user.email,
-        
-        // Datos de contacto
-        telefono: formData.telefono.trim(),
-        ciudad: formData.ciudad.trim(),
-        direccion: formData.direccion.trim(),
-        descripcion: formData.descripcion.trim(),
-        
-        // Datos de cuenta
-        rol: "cliente",
-        emailVerificado: false,
-        creadoEn: new Date(),
-        actualizadoEn: new Date(),
-        
-        // Datos de venta/compra
-        calificacionPromedio: 0,
-        totalVentas: 0,
-        totalCompras: 0,
-        productosPublicados: [],
-        favoritosIds: [],
-        carrito: [],
-        estado: "activo"
+      await fetch("http://localhost:3000/api/usuarios/profile/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          nombre,
+          apellido,
+          telefono: formData.telefono,
+          ciudad: formData.ciudad,
+          direccion: formData.direccion,
+          descripcion: formData.descripcion,
+        }),
       });
 
       navigate("/verify-email");

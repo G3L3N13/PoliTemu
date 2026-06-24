@@ -20,8 +20,9 @@ import SellerProfile from "./pages/SellerProfile";
 import ChatPage from "./pages/ChatPage"; // Asegúrate de tener este import si existe
 import Profile from "./pages/Profile";
 import ProductosCatalogo from "./pages/ProductosCatalogo";
-// Añade esta línea arriba junto a los otros imports de páginas
 import VerifyEmail from "./pages/VerifyEmail";
+import Carrito from "./pages/Carrito";
+import Ofertas from "./pages/Ofertas";
 function AppRoutes() {
   return (
     <Routes>
@@ -30,22 +31,24 @@ function AppRoutes() {
       <Route path="/register" element={<Register />} />
       <Route path="/" element={<Layout><Home /></Layout>} />
 
-<Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
       {/* Rutas Privadas (Requieren estar logueado) */}
       <Route path="/home" element={<PrivateRoute><Layout><HomePrivado /></Layout></PrivateRoute>} />
       <Route path="/productos" element={<PrivateRoute><Layout><ProductosCatalogo /></Layout></PrivateRoute>} />
       <Route path="/profile" element={<PrivateRoute><Layout><Profile /></Layout></PrivateRoute>} />
-      
+      <Route path="/vender" element={<PrivateRoute><Layout> <AdminProductos /></Layout></PrivateRoute>}/>
+
       {/* Rutas de Producto y Vendedor */}
       <Route path="/product/:id" element={<PrivateRoute><Layout><ProductPage /></Layout></PrivateRoute>} />
       <Route path="/seller/:vendedorId" element={<PrivateRoute><Layout><SellerProfile /></Layout></PrivateRoute>} />
       <Route path="/chat/:vendedorId" element={<PrivateRoute><Layout><ChatPage /></Layout></PrivateRoute>} />
-      
+      <Route path="/carrito" element={<PrivateRoute><Layout><Carrito /></Layout></PrivateRoute>} />
+      <Route path="/ofertas" element={<PrivateRoute><Layout><Ofertas /></Layout></PrivateRoute>} />
       {/* Rutas Admin (Requieren ser admin) */}
       <Route path="/dashboard" element={<AdminRoute><Layout><Dashboard /></Layout></AdminRoute>} />
       <Route path="/admin" element={<AdminRoute><Layout><AdminProductos /></Layout></AdminRoute>} />
-      
+
       {/* Sistema */}
       <Route path="/unauthorized" element={<div className="p-10 text-white">Acceso denegado: Solo administradores.</div>} />
       <Route path="*" element={<div className="p-10 text-white">Página no encontrada</div>} />

@@ -1,21 +1,23 @@
 import React, { useState } from "react";
 import { PackagePlus, DollarSign, Boxes, ImagePlus, Upload } from "lucide-react";
 import { getAuth } from "firebase/auth";
-import { productosService } from "../services/api";
+import { productosService, usuariosService } from "../services/api";
 import { supabase } from "../services/supabase";
 
-const CATEGORIAS = ["Electrónica","Computadoras","Automotríz",
-   "Libros", "Material de Estudio", "Accesorios", "Hogar",
-   "Moda","Salud y Hogar","Videojuegos","Deportes","Peliculas", "Otros"];
+const CATEGORIAS = ["Electrónica", "Computadoras", "Automotríz",
+  "Libros", "Material de Estudio", "Accesorios", "Hogar",
+  "Moda", "Salud y Hogar", "Videojuegos", "Deportes", "Peliculas", "Otros"];
 
 export default function AdminProductos() {
-  const [form, setForm] = useState({ 
-    nombre: "", 
-    categoria: CATEGORIAS[0], 
-    precio: "", 
+  const [form, setForm] = useState({
+    nombre: "",
+    categoria: CATEGORIAS[0],
+    precio: "",
     stock: "",
-    descripcion: "", // 🔥 NUEVO
-    condicion: "Nuevo", // 🔥 NUEVO: Nuevo, Como nuevo, Usado
+    descripcion: "",
+    condicion: "Nuevo",
+    enOferta: false,
+    descuento: 0
   });
   const [imagenes, setImagenes] = useState([]);
   const [previsualizaciones, setPrevisualizaciones] = useState([]);
@@ -47,12 +49,12 @@ export default function AdminProductos() {
       setMensaje({ texto: "Completa: nombre, precio e imágenes", tipo: "error" });
       return;
     }
-    
+
     setCargando(true);
     try {
       const auth = getAuth();
       const user = auth.currentUser;
-      
+
       if (!user) {
         setMensaje({ texto: "Debes estar autenticado", tipo: "error" });
         setCargando(false);
@@ -60,7 +62,13 @@ export default function AdminProductos() {
       }
 
       const token = await user.getIdToken();
-      
+
+      const perfil = await usuariosService.obtenerMiPerfil({
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
       // 🔥 AGREGAR DATOS DEL VENDEDOR Y CAMPOS NUEVOS
       const productoData = {
         nombre: form.nombre,
@@ -70,41 +78,46 @@ export default function AdminProductos() {
         precio: parseFloat(form.precio),
         stock: parseInt(form.stock || 0),
         imagenUrl: imagenes.join(", "),
-        
+
         // 🔥 NUEVO: Datos del vendedor
         vendedorId: user.uid,
-        vendedorNombre: user.displayName || "Vendedor",
-        vendedorEmail: user.email,
-        
+        vendedorNombre: perfil.nombre || "Vendedor",
+        vendedorEmail: perfil.email,
+        vendedorTelefono: perfil.telefono || "",
+
         // 🔥 NUEVO: Metadata
         creadoEn: new Date().toISOString(),
         actualizadoEn: new Date().toISOString(),
         estado: "activo",
         vistas: 0,
-        favoritos: 0
+        favoritos: 0,
+        enOferta: form.enOferta,
+        descuento: Number(form.descuento || 0)
       };
 
-      await productosService.registrar(productoData, { 
-        headers: { Authorization: `Bearer ${token}` } 
+      await productosService.registrar(productoData, {
+        headers: { Authorization: `Bearer ${token}` }
       });
 
       setMensaje({ texto: "¡Producto guardado exitosamente!", tipo: "success" });
-      
+
       // Limpiar formulario
-      setForm({ 
-        nombre: "", 
-        categoria: CATEGORIAS[0], 
-        precio: "", 
+      setForm({
+        nombre: "",
+        categoria: CATEGORIAS[0],
+        precio: "",
         stock: "",
         descripcion: "",
-        condicion: "Nuevo"
+        condicion: "Nuevo",
+        enOferta: false,
+        descuento: 0
       });
       setImagenes([]);
       setPrevisualizaciones([]);
-      
+
       // Limpiar mensaje después de 3 segundos
       setTimeout(() => setMensaje({ texto: "", tipo: "" }), 3000);
-      
+
     } catch (error) {
       console.error("Error al guardar:", error);
       setMensaje({ texto: "Error al guardar el producto", tipo: "error" });
@@ -127,11 +140,10 @@ export default function AdminProductos() {
 
       {/* MENSAJE DE FEEDBACK */}
       {mensaje.texto && (
-        <div className={`p-4 rounded-2xl mb-6 ${
-          mensaje.tipo === "success" 
-            ? "bg-green-500/20 text-green-300 border border-green-500/50" 
-            : "bg-red-500/20 text-red-300 border border-red-500/50"
-        }`}>
+        <div className={`p-4 rounded-2xl mb-6 ${mensaje.tipo === "success"
+          ? "bg-green-500/20 text-green-300 border border-green-500/50"
+          : "bg-red-500/20 text-red-300 border border-red-500/50"
+          }`}>
           {mensaje.texto}
         </div>
       )}
@@ -140,21 +152,21 @@ export default function AdminProductos() {
         {/* NOMBRE */}
         <div>
           <label className="text-sm text-gray-300 mb-2 block">Nombre</label>
-          <input 
-            type="text" 
-            value={form.nombre} 
-            onChange={(e) => setForm({...form, nombre: e.target.value})} 
+          <input
+            type="text"
+            value={form.nombre}
+            onChange={(e) => setForm({ ...form, nombre: e.target.value })}
             placeholder="Ej: Laptop Dell"
-            className="w-full bg-white/10 border border-white/10 rounded-2xl px-5 py-4 outline-none focus:border-cyan-400 transition text-white" 
+            className="w-full bg-white/10 border border-white/10 rounded-2xl px-5 py-4 outline-none focus:border-cyan-400 transition text-white"
           />
         </div>
 
         {/* CATEGORÍA */}
         <div>
           <label className="text-sm text-gray-300 mb-2 block">Categoría</label>
-          <select 
-            value={form.categoria} 
-            onChange={(e) => setForm({...form, categoria: e.target.value})} 
+          <select
+            value={form.categoria}
+            onChange={(e) => setForm({ ...form, categoria: e.target.value })}
             className="w-full bg-white/10 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none focus:border-cyan-400 transition"
           >
             {CATEGORIAS.map(cat => <option key={cat} value={cat} className="bg-[#020617]">{cat}</option>)}
@@ -164,33 +176,70 @@ export default function AdminProductos() {
         {/* PRECIO */}
         <div>
           <label className="text-sm text-gray-300 mb-2 block">Precio ($)</label>
-          <input 
-            type="number" 
-            value={form.precio} 
-            onChange={(e) => setForm({...form, precio: e.target.value})} 
+          <input
+            type="number"
+            value={form.precio}
+            onChange={(e) => setForm({ ...form, precio: e.target.value })}
             placeholder="0.00"
-            className="w-full bg-white/10 border border-white/10 rounded-2xl px-5 py-4 outline-none focus:border-cyan-400 transition text-white" 
+            className="w-full bg-white/10 border border-white/10 rounded-2xl px-5 py-4 outline-none focus:border-cyan-400 transition text-white"
           />
         </div>
+
+        <label className="flex items-center gap-3 mt-4">
+          <input
+            type="checkbox"
+            checked={form.enOferta}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                enOferta: e.target.checked,
+              })
+            }
+          />
+          Producto en oferta
+        </label>
+
+        {form.enOferta && (
+          <div className="mt-4">
+            <label className="text-sm text-gray-300 mb-2 block">
+              Descuento (%)
+            </label>
+
+            <input
+              type="number"
+              min="0"
+              max="100"
+              value={form.descuento}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  descuento: e.target.value
+                })
+              }
+              className="w-full bg-white/10 border border-white/10 rounded-2xl px-5 py-3 text-white"
+              placeholder="Ej: 20"
+            />
+          </div>
+        )}
 
         {/* STOCK */}
         <div>
           <label className="text-sm text-gray-300 mb-2 block">Stock</label>
-          <input 
-            type="number" 
-            value={form.stock} 
-            onChange={(e) => setForm({...form, stock: e.target.value})} 
+          <input
+            type="number"
+            value={form.stock}
+            onChange={(e) => setForm({ ...form, stock: e.target.value })}
             placeholder="0"
-            className="w-full bg-white/10 border border-white/10 rounded-2xl px-5 py-4 outline-none focus:border-cyan-400 transition text-white" 
+            className="w-full bg-white/10 border border-white/10 rounded-2xl px-5 py-4 outline-none focus:border-cyan-400 transition text-white"
           />
         </div>
 
         {/* CONDICIÓN */}
         <div>
           <label className="text-sm text-gray-300 mb-2 block">Condición</label>
-          <select 
-            value={form.condicion} 
-            onChange={(e) => setForm({...form, condicion: e.target.value})} 
+          <select
+            value={form.condicion}
+            onChange={(e) => setForm({ ...form, condicion: e.target.value })}
             className="w-full bg-white/10 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none focus:border-cyan-400 transition"
           >
             <option value="Nuevo">Nuevo</option>
@@ -200,14 +249,16 @@ export default function AdminProductos() {
         </div>
       </div>
 
+
+
       {/* DESCRIPCIÓN */}
       <div className="mt-6">
         <label className="text-sm text-gray-300 mb-2 block">Descripción</label>
-        <textarea 
-          value={form.descripcion} 
-          onChange={(e) => setForm({...form, descripcion: e.target.value})} 
+        <textarea
+          value={form.descripcion}
+          onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
           placeholder="Describe tu producto..."
-          className="w-full bg-white/10 border border-white/10 rounded-2xl px-5 py-4 outline-none focus:border-cyan-400 transition text-white resize-none h-24" 
+          className="w-full bg-white/10 border border-white/10 rounded-2xl px-5 py-4 outline-none focus:border-cyan-400 transition text-white resize-none h-24"
         />
       </div>
 
@@ -239,8 +290,8 @@ export default function AdminProductos() {
       )}
 
       {/* BOTÓN GUARDAR */}
-      <button 
-        onClick={handleGuardarProducto} 
+      <button
+        onClick={handleGuardarProducto}
         disabled={cargando || subiendo}
         className="w-full mt-8 bg-cyan-500 hover:bg-cyan-600 disabled:opacity-50 text-black py-4 rounded-2xl font-bold transition"
       >

@@ -21,6 +21,11 @@ export default function Login() {
       const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
       const user = cred.user;
 
+      const token = await user.getIdToken();
+
+      localStorage.setItem("token", token);
+      localStorage.setItem("uid", user.uid);
+
       // Forzar recarga para obtener emailVerified actualizado
       try { await user.reload(); } catch (reloadErr) { console.warn("reload:", reloadErr); }
 
@@ -59,7 +64,7 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-[#0B1E63] flex items-center justify-center px-6 py-10">
       <div className="w-full max-w-6xl bg-white rounded-[40px] overflow-hidden shadow-2xl grid lg:grid-cols-2">
-        
+
         {/* LEFT SIDE - IMAGEN */}
         <div className="relative hidden lg:block">
           <img src={buhoImg} alt="Imagen Buho" className="w-full h-full object-cover" />
@@ -75,7 +80,7 @@ export default function Login() {
         {/* RIGHT SIDE - FORMULARIO */}
         <div className="flex items-center justify-center p-10 md:p-16">
           <div className="w-full max-w-md">
-            
+
             {/* LOGO */}
             <div className="mb-10 text-center">
               <h1 className="text-5xl font-bold text-[#0B1E63]">
@@ -122,8 +127,8 @@ export default function Login() {
 
             {/* OLVIDÉ CONTRASEÑA */}
             <div className="mb-6 text-right">
-              <Link 
-                to="/forgot-password" 
+              <Link
+                to="/forgot-password"
                 className="text-sm text-[#6C4CF1] hover:underline font-medium"
               >
                 ¿Olvidaste tu contraseña?
@@ -143,8 +148,8 @@ export default function Login() {
             <div className="mt-8 text-center">
               <p className="text-gray-600">
                 ¿No tienes cuenta?{" "}
-                <Link 
-                  to="/register" 
+                <Link
+                  to="/register"
                   className="text-[#6C4CF1] font-semibold hover:underline"
                 >
                   Regístrate aquí
@@ -160,8 +165,8 @@ export default function Login() {
             </div>
 
             {/* VOLVER AL HOME */}
-            <Link 
-              to="/" 
+            <Link
+              to="/"
               className="w-full block text-center bg-gray-200 hover:bg-gray-300 text-gray-800 py-3 rounded-2xl font-semibold transition"
             >
               Volver al inicio

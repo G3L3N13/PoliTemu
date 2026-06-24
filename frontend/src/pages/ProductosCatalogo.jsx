@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { productosService } from "../services/api";
+import { productosService, carritoService } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
@@ -13,6 +13,7 @@ function ProductosCatalogo() {
   const [categoriaActiva, setCategoriaActiva] = useState("Todos");
   const [productoSeleccionado, setProductoSeleccionado] = useState(null);
   const [indiceFoto, setIndiceFoto] = useState(0);
+
 
   useEffect(() => {
     const cargar = async () => {
@@ -66,6 +67,20 @@ function ProductosCatalogo() {
     }
   };
 
+  const agregarAlCarritoModal = async () => {
+    try {
+      await carritoService.agregar({
+        productoId: productoSeleccionado._id || productoSeleccionado.id,
+        cantidad: 1,
+      });
+
+      alert("Producto agregado al carrito");
+    } catch (error) {
+      console.error("Error al agregar al carrito:", error);
+      alert("No se pudo agregar el producto");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0a0a1a] text-white px-6 py-10">
       <div className="fixed top-20 left-10 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
@@ -105,11 +120,10 @@ function ProductosCatalogo() {
               <button
                 key={cat}
                 onClick={() => setCategoriaActiva(cat)}
-                className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
-                  categoriaActiva === cat
+                className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${categoriaActiva === cat
                     ? "bg-purple-600 text-white"
                     : "bg-white/5 border border-white/10 text-gray-400 hover:border-purple-500/40"
-                }`}
+                  }`}
               >
                 {cat}
               </button>
@@ -258,6 +272,7 @@ function ProductosCatalogo() {
                   📄 Ver detalles completos
                 </button>
                 <button
+                  onClick={agregarAlCarritoModal}
                   disabled={productoSeleccionado.stock === 0}
                   className="w-full bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed text-white py-3 rounded-xl font-bold transition"
                 >
