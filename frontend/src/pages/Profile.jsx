@@ -14,7 +14,7 @@ function Profile() {
   const [cargandoPerfil, setCargandoPerfil] = useState(true);
   const [misProductos, setMisProductos] = useState([]);
   const [cargandoProductos, setCargandoProductos] = useState(false);
-  
+
   console.log("PROFILE CONTEXT:", profile);
   // 2. Cargar productos del usuario
   useEffect(() => {
@@ -23,11 +23,7 @@ function Profile() {
 
       try {
         setCargandoProductos(true);
-        const todosProductos = await productosService.getTodos();
-
-        const productos = Array.isArray(todosProductos)
-          ? todosProductos.filter(p => p.vendedorId === user.uid)
-          : [];
+        const productos = await productosService.misProductos();
         setMisProductos(productos);
       } catch (err) {
         console.error("Error al cargar productos:", err);
@@ -47,6 +43,44 @@ function Profile() {
     if (Array.isArray(imagenUrl)) return imagenUrl[0];
     const urls = imagenUrl.split(",").map(u => u.trim()).filter(Boolean);
     return urls[0] || "/placeholder.png";
+  };
+
+  const eliminarProducto = async (id) => {
+    if (!confirm("¿Seguro que deseas eliminar este producto?")) return;
+
+    try {
+      await productosService.eliminar(id);
+
+      setMisProductos(prev =>
+        prev.filter(p => (p._id || p.id) !== id)
+      );
+    } catch (err) {
+      console.error("Error eliminando producto:", err);
+    }
+  };
+
+  const editarProducto = async (producto) => {
+    const nuevoPrecio = prompt("Nuevo precio:", producto.precio);
+    const nuevoStock = prompt("Nuevo stock:", producto.stock);
+
+    if (nuevoPrecio === null || nuevoStock === null) return;
+
+    try {
+      await productosService.actualizar(producto._id || producto.id, {
+        precio: Number(nuevoPrecio),
+        stock: Number(nuevoStock)
+      });
+
+      setMisProductos(prev =>
+        prev.map(p =>
+          (p._id || p.id) === (producto._id || producto.id)
+            ? { ...p, precio: nuevoPrecio, stock: nuevoStock }
+            : p
+        )
+      );
+    } catch (err) {
+      console.error("Error editando producto:", err);
+    }
   };
 
   return (
@@ -178,11 +212,33 @@ function Profile() {
                       <div className="flex items-center justify-between">
                         <p className="text-yellow-400 font-black text-lg">${Number(producto.precio || 0).toFixed(2)}</p>
                         <span className={`text-xs px-3 py-1 rounded-full ${producto.stock > 0
-                            ? "bg-green-500/20 text-green-400"
-                            : "bg-red-500/20 text-red-400"
+                          ? "bg-green-500/20 text-green-400"
+                          : "bg-red-500/20 text-red-400"
                           }`}>
                           {producto.stock > 0 ? `${producto.stock} disponibles` : "Sin stock"}
                         </span>
+                      </div>
+                      {/* CRUD VENDEDOR */}
+                      <div className="flex gap-2 mt-4">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            editarProducto(producto);
+                          }}
+                          className="flex-1 bg-blue-500 hover:bg-blue-600 text-white text-xs py-2 rounded-lg"
+                        >
+                          Editar
+                        </button>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            eliminarProducto(producto._id || producto.id);
+                          }}
+                          className="flex-1 bg-red-500 hover:bg-red-600 text-white text-xs py-2 rounded-lg"
+                        >
+                          Eliminar
+                        </button>
                       </div>
                     </div>
                   </div>

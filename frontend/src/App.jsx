@@ -23,6 +23,9 @@ import ProductosCatalogo from "./pages/ProductosCatalogo";
 import VerifyEmail from "./pages/VerifyEmail";
 import Carrito from "./pages/Carrito";
 import Ofertas from "./pages/Ofertas";
+import AdminProductosLista from "./pages/AdminProductosLista";
+import AdminUsuarios from "./pages/AdminUsuarios";
+import AdminOfertas from "./pages/AdminOfertas";
 function AppRoutes() {
   return (
     <Routes>
@@ -37,7 +40,7 @@ function AppRoutes() {
       <Route path="/home" element={<PrivateRoute><Layout><HomePrivado /></Layout></PrivateRoute>} />
       <Route path="/productos" element={<PrivateRoute><Layout><ProductosCatalogo /></Layout></PrivateRoute>} />
       <Route path="/profile" element={<PrivateRoute><Layout><Profile /></Layout></PrivateRoute>} />
-      <Route path="/vender" element={<PrivateRoute><Layout> <AdminProductos /></Layout></PrivateRoute>}/>
+      <Route path="/vender" element={<PrivateRoute><Layout> <AdminProductos /></Layout></PrivateRoute>} />
 
       {/* Rutas de Producto y Vendedor */}
       <Route path="/product/:id" element={<PrivateRoute><Layout><ProductPage /></Layout></PrivateRoute>} />
@@ -48,6 +51,9 @@ function AppRoutes() {
       {/* Rutas Admin (Requieren ser admin) */}
       <Route path="/dashboard" element={<AdminRoute><Layout><Dashboard /></Layout></AdminRoute>} />
       <Route path="/admin" element={<AdminRoute><Layout><AdminProductos /></Layout></AdminRoute>} />
+      <Route path="/admin-productos" element={<AdminProductosLista />}/>
+      <Route path="/dashboard/usuarios" element={<AdminUsuarios />}/>
+      <Route path="/dashboard/ofertas" element={<AdminOfertas />}/>
 
       {/* Sistema */}
       <Route path="/unauthorized" element={<div className="p-10 text-white">Acceso denegado: Solo administradores.</div>} />

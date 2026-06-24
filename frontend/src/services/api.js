@@ -31,10 +31,14 @@ export const productosService = {
     const respuesta = await API.post("/productos", datosProducto);
     return respuesta.data;
   },
+  misProductos: async () => {
+    const response = await API.get("/productos/vendedor/mis-productos");
+    return response.data;
+  }
 };
 
 export const usuariosService = {
-  obtenerMiPerfil: async (config ={}) => {
+  obtenerMiPerfil: async (config = {}) => {
     const respuesta = await API.get("/usuarios/profile/me", config);
     return respuesta.data;
   },
@@ -48,6 +52,49 @@ export const usuariosService = {
     const respuesta = await API.get("/usuarios/role");
     return respuesta.data;
   },
+};
+
+export const adminService = {
+
+  stats: async () => {
+    const response = await API.get(
+      "/usuarios/admin/stats"
+    );
+
+    return response.data;
+  },
+
+  usuarios: async () => {
+    const response = await API.get(
+      "/usuarios"
+    );
+
+    return response.data;
+  },
+
+  eliminarUsuario: async (id) => {
+    const response = await API.delete(
+      `/usuarios/${id}`
+    );
+
+    return response.data;
+  },
+
+  productos: async () => {
+    const response = await API.get(
+      "/productos"
+    );
+
+    return response.data;
+  },
+
+  eliminarProducto: async (id) => {
+    const response = await API.delete(
+      `/productos/${id}`
+    );
+
+    return response.data;
+  }
 };
 
 export const carritoService = {
@@ -83,3 +130,4 @@ export const carritoService = {
     return response.data;
   },
 };
+

@@ -65,4 +65,20 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
+router.patch("/:id/oferta", async (req, res) => {
+  const { id } = req.params;
+  const { descuento } = req.body;
+
+  await db.collection("productos")
+    .doc(id)
+    .update({
+      enOferta: true,
+      descuento
+    });
+
+  res.json({
+    mensaje: "Oferta creada"
+  });
+});
+
 export default router;

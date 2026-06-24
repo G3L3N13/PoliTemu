@@ -23,6 +23,8 @@ function Ofertas() {
                 Number(b.descuento) - Number(a.descuento)
             );
 
+        console.log("OFERTAS:", ofertas);
+
         setProductos(ofertas);
     };
 

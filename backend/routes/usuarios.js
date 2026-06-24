@@ -21,11 +21,11 @@ router.get("/profile/me", verificarFirebaseToken, async (req, res) => {
   try {
     const { uid } = req.user;
     const doc = await db.collection("usuarios").doc(uid).get();
-    
+
     if (!doc.exists) {
       return res.status(404).json({ error: "Perfil de usuario no encontrado" });
     }
-    
+
     res.json({ id: doc.id, ...doc.data() });
   } catch (error) {
     console.error("Error al obtener perfil del usuario:", error);
@@ -93,10 +93,10 @@ router.post("/profile/create", verificarFirebaseToken, async (req, res) => {
     };
 
     await db.collection("usuarios").doc(uid).set(usuarioData, { merge: true });
-    
-    res.json({ 
+
+    res.json({
       mensaje: "Perfil creado/actualizado exitosamente",
-      usuario: usuarioData 
+      usuario: usuarioData
     });
   } catch (error) {
     console.error("Error al crear/actualizar perfil:", error);
@@ -109,7 +109,7 @@ router.put("/profile/me", verificarFirebaseToken, async (req, res) => {
   try {
     const { uid } = req.user;
     const datosActualizados = req.body;
-    
+
     // No permitir cambiar ciertos campos
     delete datosActualizados.uid;
     delete datosActualizados.email;
@@ -117,12 +117,12 @@ router.put("/profile/me", verificarFirebaseToken, async (req, res) => {
     delete datosActualizados.totalVentas;
     delete datosActualizados.totalCompras;
     delete datosActualizados.fechaRegistro;
-    
+
     await db.collection("usuarios").doc(uid).update(datosActualizados);
-    
-    res.json({ 
+
+    res.json({
       mensaje: "Perfil actualizado exitosamente",
-      usuarioActualizado: datosActualizados 
+      usuarioActualizado: datosActualizados
     });
   } catch (error) {
     console.error("Error al actualizar perfil:", error);
@@ -173,7 +173,7 @@ router.patch("/:id/ventas", async (req, res) => {
     const { id } = req.params;
     const doc = await db.collection("usuarios").doc(id).get();
     const totalVentas = (doc.data()?.totalVentas || 0) + 1;
-    
+
     await db.collection("usuarios").doc(id).update({ totalVentas });
     res.json({ id, totalVentas });
   } catch (error) {
@@ -188,7 +188,7 @@ router.patch("/:id/compras", async (req, res) => {
     const { id } = req.params;
     const doc = await db.collection("usuarios").doc(id).get();
     const totalCompras = (doc.data()?.totalCompras || 0) + 1;
-    
+
     await db.collection("usuarios").doc(id).update({ totalCompras });
     res.json({ id, totalCompras });
   } catch (error) {
@@ -221,5 +221,53 @@ router.get("/role", verificarFirebaseToken, async (req, res) => {
   }
 });
 
+router.get("/admin/stats", async (req, res) => {
+  try {
+    const usuarios = await db.collection("usuarios").get();
+    const productos = await db.collection("productos").get();
+
+    const totalUsuarios = usuarios.size;
+    const totalProductos = productos.size;
+
+    const productosOferta = productos.docs.filter(
+      doc => doc.data().enOferta === true
+    ).length;
+
+    res.json({
+      totalUsuarios,
+      totalProductos,
+      productosOferta
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      error: "Error obteniendo estadísticas"
+    });
+  }
+});
+
+router.get("/admin/stats", async (req, res) => {
+  try {
+
+    const usuarios = await db.collection("usuarios").get();
+    const productos = await db.collection("productos").get();
+
+    const productosOferta = productos.docs.filter(
+      doc => doc.data().enOferta === true
+    );
+
+    res.json({
+      usuarios: usuarios.size,
+      productos: productos.size,
+      ofertas: productosOferta.length
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      error: "Error al obtener estadísticas"
+    });
+  }
+});
 
 export default router;

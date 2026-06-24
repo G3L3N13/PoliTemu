@@ -1,17 +1,44 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Package, Users, ShoppingCart, DollarSign, TrendingUp } from "lucide-react";
+import { Link } from "react-router-dom";
+import { adminService } from "../services/api";
 
 function Dashboard() {
   const [ventas] = useState([500, 700, 800, 650]);
-  const [usuarios] = useState(45);
-  const [pedidos] = useState(8);
+  const [usuarios, setUsuarios] = useState(0);
+  const [productos, setProductos] = useState(0);
+  const [ofertas, setOfertas] = useState(0);
 
   const stats = [
-    { icon: <Package size={32} />, valor: "120",   label: "Productos Totales",    color: "from-purple-600/20 to-purple-900/10", border: "hover:border-purple-500/40", text: "text-purple-400" },
-    { icon: <Users size={32} />,   valor: usuarios, label: "Usuarios Registrados", color: "from-blue-600/20 to-blue-900/10",   border: "hover:border-blue-500/40",   text: "text-blue-400" },
-    { icon: <ShoppingCart size={32} />, valor: pedidos, label: "Pedidos Pendientes", color: "from-yellow-500/20 to-yellow-800/10", border: "hover:border-yellow-500/40", text: "text-yellow-400" },
+    { icon: <Package size={32} />, valor: productos, label: "Productos Totales", color: "from-purple-600/20 to-purple-900/10", border: "hover:border-purple-500/40", text: "text-purple-400" },
+    { icon: <Users size={32} />, valor: usuarios, label: "Usuarios Registrados", color: "from-blue-600/20 to-blue-900/10", border: "hover:border-blue-500/40", text: "text-blue-400" },
+    { icon: <ShoppingCart size={32} />, valor: ofertas, label: "Productos en Oferta", color: "from-yellow-500/20 to-yellow-800/10", border: "hover:border-yellow-500/40", text: "text-yellow-400" },
     { icon: <DollarSign size={32} />, valor: "$2,650", label: "Ganancias del Mes", color: "from-green-600/20 to-green-900/10", border: "hover:border-green-500/40", text: "text-green-400" },
   ];
+
+  useEffect(() => {
+    cargarStats();
+  }, []);
+
+  const cargarStats = async () => {
+    try {
+
+      const usuariosData = await adminService.usuarios();
+      const productosData = await adminService.productos();
+
+      setUsuarios(usuariosData.length);
+      setProductos(productosData.length);
+
+      const ofertasActivas = productosData.filter(
+        p => p.enOferta
+      );
+
+      setOfertas(ofertasActivas.length);
+
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   const maxVenta = Math.max(...ventas);
 
@@ -84,6 +111,32 @@ function Dashboard() {
           <span className="text-white font-black text-2xl">
             ${ventas.reduce((a, b) => a + b, 0).toLocaleString()}
           </span>
+        </div>
+
+
+        <div className="grid md:grid-cols-3 gap-6 mt-10">
+
+          <Link
+            to="/admin-productos"
+            className="bg-white/5 border border-white/10 p-6 rounded-3xl"
+          >
+            📦 Gestionar Productos
+          </Link>
+
+          <Link
+            to="/dashboard/usuarios"
+            className="bg-white/5 border border-white/10 p-6 rounded-3xl"
+          >
+            👥 Gestionar Usuarios
+          </Link>
+
+          <Link
+            to="/dashboard/ofertas"
+            className="bg-white/5 border border-white/10 p-6 rounded-3xl"
+          >
+            🔥 Gestionar Ofertas
+          </Link>
+
         </div>
       </div>
     </div>
