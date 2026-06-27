@@ -4,6 +4,8 @@ import { signOut } from "firebase/auth";
 import { auth, db } from "../services/firebase";
 import { useAuth } from "../context/AuthContext";
 import { doc, getDoc } from "firebase/firestore";
+// 1. IMPORTA AQUÍ TU COMPONENTE
+import CartIcon from "./common/CartIcon"; 
 
 function Navbar() {
   const [open, setOpen] = useState(false);
@@ -38,11 +40,18 @@ function Navbar() {
 
       <ul className="hidden md:flex items-center gap-6 text-sm">
         <li><Link to="/" className="text-blue-200 hover:text-yellow-400">Inicio</Link></li>
+        
         {user ? (
           <>
             <li><Link to="/home" className="text-blue-200 hover:text-yellow-400">Catálogo</Link></li>
             {isAdmin && <li><Link to="/dashboard" className="text-yellow-400 font-bold">Dashboard</Link></li>}
             <li><Link to="/profile" className="text-blue-200 hover:text-yellow-400">Perfil</Link></li>
+            
+            {/* 2. AQUÍ ESTÁ LA INTEGRACIÓN */}
+            <li className="flex items-center">
+                <CartIcon />
+            </li>
+
             <li><button onClick={handleLogout} className="bg-yellow-400 text-blue-900 font-bold px-4 py-1.5 rounded-lg">Salir</button></li>
           </>
         ) : (

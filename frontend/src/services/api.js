@@ -1,16 +1,22 @@
+// src/services/api.js
 import axios from "axios";
 import { auth } from "./firebase";
 
+// 1. Configuración de la URL base
+// Asegúrate de tener un archivo .env en la raíz con: VITE_API_URL=http://localhost:3000/api
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+
 const API = axios.create({
-  baseURL: "http://localhost:3000/api",
+  baseURL: API_URL,
 });
 
-// Agregar automáticamente el token a cada petición
+// 2. Interceptor de Request: Agrega automáticamente el token a cada petición
 API.interceptors.request.use(
   async (config) => {
     const user = auth.currentUser;
 
     if (user) {
+      // getIdToken() refresca el token automáticamente si está expirado
       const token = await user.getIdToken();
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -20,32 +26,42 @@ API.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// 3. Interceptor de Response: Manejo centralizado de errores
+API.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Si recibimos un 401, la sesión ha expirado o el usuario no está autorizado
+    if (error.response?.status === 401) {
+      console.warn("Sesión expirada o falta de autorización.");
+      // Opcional: podrías redirigir al usuario al login aquí
+    }
+    return Promise.reject(error);
+  }
+);
+
+// --- SERVICIOS ---
+
 export const productosService = {
-  // Lista de todos los productos (Pública)
   getTodos: async () => {
     const respuesta = await API.get("/productos");
     return respuesta.data;
   },
 
-  // Obtener solo mis productos (Requiere Auth)
   getMisProductos: async () => {
     const respuesta = await API.get("/productos/vendedor/mis-productos");
     return respuesta.data;
   },
 
-  // Registrar producto (Requiere Auth)
   registrar: async (datosProducto) => {
     const respuesta = await API.post("/productos", datosProducto);
     return respuesta.data;
   },
 
-  // Actualizar producto (Requiere Auth)
   actualizar: async (id, datos) => {
     const respuesta = await API.put(`/productos/${id}`, datos);
     return respuesta.data;
   },
 
-  // Eliminar producto (Requiere Auth)
   eliminar: async (id) => {
     const respuesta = await API.delete(`/productos/${id}`);
     return respuesta.data;
@@ -53,8 +69,8 @@ export const productosService = {
 };
 
 export const usuariosService = {
-  obtenerMiPerfil: async (config = {}) => {
-    const respuesta = await API.get("/usuarios/profile/me", config);
+  obtenerMiPerfil: async () => {
+    const respuesta = await API.get("/usuarios/profile/me");
     return respuesta.data;
   },
 

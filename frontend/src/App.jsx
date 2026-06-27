@@ -1,16 +1,11 @@
-import { Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
+import { CartProvider } from "./context/CartContext";
+import FloatingCart from "./components/common/FloatingCart";
+// Layouts y Protecciones
 import Layout from "./components/Layout";
 import PrivateRoute from "./components/PrivateRoute";
 import AdminRoute from "./components/AdminRoute";
-// Importa el componente
-import ForgotPassword from "./pages/ForgotPassword";
-// Ejemplo en App.js
-import EditarProducto from "./pages/EditarProducto"; // O donde lo vayas a guardar
-
-// ... dentro de tu <Routes>
-<Route path="/editar-producto/:id" element={<EditarProducto />} />
-// Dentro de tu <Routes>:
 
 // Pages
 import Home from "./pages/Home";
@@ -21,12 +16,15 @@ import Dashboard from "./pages/Dashboard";
 import AdminProductos from "./pages/AdminProductos";
 import ProductPage from "./pages/ProductPage";
 import SellerProfile from "./pages/SellerProfile";
-import ChatPage from "./pages/ChatPage"; // Asegúrate de tener este import si existe
+import ChatPage from "./pages/ChatPage";
 import Profile from "./pages/Profile";
 import ProductosCatalogo from "./pages/ProductosCatalogo";
 import VerifyEmail from "./pages/VerifyEmail";
 import Carrito from "./pages/Carrito";
 import Ofertas from "./pages/Ofertas";
+import ForgotPassword from "./pages/ForgotPassword";
+import EditarProducto from "./pages/EditarProducto";
+
 function AppRoutes() {
   return (
     <Routes>
@@ -34,32 +32,24 @@ function AppRoutes() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/" element={<Layout><Home /></Layout>} />
-
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
+
       {/* Rutas Privadas (Requieren estar logueado) */}
       <Route path="/home" element={<PrivateRoute><Layout><HomePrivado /></Layout></PrivateRoute>} />
       <Route path="/productos" element={<PrivateRoute><Layout><ProductosCatalogo /></Layout></PrivateRoute>} />
       <Route path="/profile" element={<PrivateRoute><Layout><Profile /></Layout></PrivateRoute>} />
-      <Route path="/vender" element={<PrivateRoute><Layout> <AdminProductos /></Layout></PrivateRoute>}/>
-
-      {/* Rutas de Producto y Vendedor */}
+      <Route path="/vender" element={<PrivateRoute><Layout><AdminProductos /></Layout></PrivateRoute>}/>
       <Route path="/product/:id" element={<PrivateRoute><Layout><ProductPage /></Layout></PrivateRoute>} />
       <Route path="/seller/:vendedorId" element={<PrivateRoute><Layout><SellerProfile /></Layout></PrivateRoute>} />
       <Route path="/chat/:vendedorId" element={<PrivateRoute><Layout><ChatPage /></Layout></PrivateRoute>} />
       <Route path="/carrito" element={<PrivateRoute><Layout><Carrito /></Layout></PrivateRoute>} />
       <Route path="/ofertas" element={<PrivateRoute><Layout><Ofertas /></Layout></PrivateRoute>} />
-      <Route 
-  path="/editar-producto/:id" 
-  element={
-    <PrivateRoute>
-      <Layout>
-        <EditarProducto />
-      </Layout>
-    </PrivateRoute>
-  } 
-/>
-      {/* Rutas Admin (Requieren ser admin) */}
+      <Route path="/editar-producto/:id" element={<PrivateRoute><Layout><EditarProducto /></Layout></PrivateRoute>} />
+
+      <Route path="/chat" element={<ChatPage />} />
+      <Route path="/chat/:vendedorId" element={<ChatPage />} />
+      {/* Rutas Admin */}
       <Route path="/dashboard" element={<AdminRoute><Layout><Dashboard /></Layout></AdminRoute>} />
       <Route path="/admin" element={<AdminRoute><Layout><AdminProductos /></Layout></AdminRoute>} />
 
@@ -72,8 +62,14 @@ function AppRoutes() {
 
 export default function App() {
   return (
+    // Es vital el orden: AuthProvider primero, luego CartProvider
     <AuthProvider>
-      <AppRoutes />
+      <CartProvider>
+        <Router>
+          <AppRoutes />
+          <FloatingCart />
+        </Router>
+      </CartProvider>
     </AuthProvider>
   );
 }
