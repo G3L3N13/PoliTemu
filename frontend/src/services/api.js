@@ -11,14 +11,18 @@ const API = axios.create({
 });
 
 // 2. Interceptor de Request: Agrega automáticamente el token a cada petición
+// En tu interceptor:
 API.interceptors.request.use(
   async (config) => {
     const user = auth.currentUser;
+    console.log("Usuario actual:", user ? user.email : "No hay usuario");
 
     if (user) {
-      // getIdToken() refresca el token automáticamente si está expirado
       const token = await user.getIdToken();
+      console.log("Token enviado:", token ? "Token generado correctamente" : "No se pudo generar");
       config.headers.Authorization = `Bearer ${token}`;
+    } else {
+      console.warn("Petición realizada sin usuario autenticado");
     }
 
     return config;
