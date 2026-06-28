@@ -1,13 +1,16 @@
-// frontend/src/services/socket.js
 import { io } from "socket.io-client";
 
-// Obtenemos la URL de la API desde las variables de entorno
-// Si es local, usará http://localhost:3000
-// Si es producción, usará la URL de tu backend en Render
+// Obtenemos la URL desde las variables de entorno
 const SOCKET_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
-export const socket = io(SOCKET_URL, {
-  autoConnect: false,
-  // Es buena práctica forzar el transporte a websocket en lugar de polling
-  transports: ["websocket"], 
+// Si VITE_API_URL incluye "/api", debemos quitarlo para el socket
+// porque el socket conecta al servidor base, no a la ruta /api
+const socketEndpoint = SOCKET_URL.replace("/api", "");
+
+export const socket = io(socketEndpoint, {
+  transports: ["websocket"], // Forzamos websocket para evitar problemas de polling en Render
+  autoConnect: false, // Es mejor conectarlo manualmente cuando el usuario esté listo
+  auth: {
+    token: localStorage.getItem("token") // Asegúrate de pasar el token aquí
+  }
 });
