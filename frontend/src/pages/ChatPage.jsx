@@ -39,16 +39,34 @@ function ChatPage() {
     }
   }, [mensajes]);
 
-  // 1. Conexión WebSocket
-  useEffect(() => {
-    if (loading) return;
-    if (user) {
-      socket.connect(); 
+ // 1. Conexión WebSocket (MODIFICADO)
+useEffect(() => {
+  const conectarSocket = async () => {
+    // Si todavía está cargando o no hay usuario, no hacemos nada
+    if (loading || !user) return;
+
+    try {
+      // Obtenemos el token de Firebase del usuario
+      const token = await user.getIdToken();
+      
+      // Asignamos el token al socket para que el backend lo valide
+      socket.auth = { token };
+      
+      // Ahora sí, nos conectamos
+      socket.connect();
+      console.log("Socket autenticado y conectando...");
+    } catch (err) {
+      console.error("Error al obtener token para el socket:", err);
     }
-    return () => {
-      socket.disconnect(); 
-    };
-  }, [user, loading]);
+  };
+
+  conectarSocket();
+
+  // Limpieza al desmontar
+  return () => {
+    socket.disconnect();
+  };
+}, [user, loading]); // Dependencias correctas
 
   // 2. CARGA SEGURA DEL HISTORIAL
   useEffect(() => {
