@@ -61,6 +61,7 @@ app.use(express.static(distPath));
 
 // La ruta comodín sigue igual, pero usando la misma variable
 app.get(/.*/, (req, res) => {
+  console.log("⚠️ Petición recibida en catch-all:", req.path);
   res.sendFile(path.join(distPath, "index.html"));
 });
 // --- SOCKETS ---
