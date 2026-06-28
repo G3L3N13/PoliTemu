@@ -1,127 +1,43 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useChat } from "../context/ChatContext"; // ¡Importamos nuestro contexto global!
 import { db } from "../services/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import ChatSidebar from "../components/chat/ChatSidebar";
-import { io } from "socket.io-client";
-
-// --- CONFIGURACIÓN DINÁMICA ---
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000";
-// Si la URL es https://.../api, el socket debe ir a https://...
-const SOCKET_URL = API_BASE.replace("/api", ""); 
-
-const socket = io(SOCKET_URL, { autoConnect: false });
-// ------------------------------
 
 function ChatPage() {
   const { vendedorId } = useParams();
   const navigate = useNavigate();
-  const { user, profile, loading } = useAuth();
+  const { user, loading } = useAuth();
+  
+  // Extraemos TODO del contexto global
+  const { setChatActivoId, mensajes, enviarMensaje, chatActivoId } = useChat();
+
   const [vendedor, setVendedor] = useState(null);
   const [mensaje, setMensaje] = useState("");
-  const [cargando, setCargando] = useState(false);
-  const [mensajes, setMensajes] = useState([]);
-  
   const contenedorMensajesRef = useRef(null);
 
-  const generarChatId = (uid1, uid2) => {
-    if (!uid1 || !uid2) return null;
-    return [uid1, uid2].sort().join("_");
-  };
+  // 1. Generar el ID único del chat y avisarle al Contexto Global
+  useEffect(() => {
+    if (!user || !vendedorId) return;
+    
+    // Generamos el ID combinando los UIDs
+    const nuevoChatId = [user.uid, vendedorId].sort().join("_");
+    
+    // Le decimos al proveedor global: "Hey, este es el chat actual"
+    setChatActivoId(nuevoChatId);
+    
+  }, [user, vendedorId, setChatActivoId]);
 
-  const chatId = user && vendedorId ? generarChatId(user.uid, vendedorId) : null;
-
-  // Auto-scroll
+  // 2. Auto-scroll (Se mantiene igual)
   useEffect(() => {
     if (contenedorMensajesRef.current) {
       contenedorMensajesRef.current.scrollTop = contenedorMensajesRef.current.scrollHeight;
     }
   }, [mensajes]);
 
- // 1. Conexión WebSocket (MODIFICADO)
-useEffect(() => {
-  const conectarSocket = async () => {
-    // Si todavía está cargando o no hay usuario, no hacemos nada
-    if (loading || !user) return;
-
-    try {
-      // Obtenemos el token de Firebase del usuario
-      const token = await user.getIdToken();
-      
-      // Asignamos el token al socket para que el backend lo valide
-      socket.auth = { token };
-      
-      // Ahora sí, nos conectamos
-      socket.connect();
-      console.log("Socket autenticado y conectando...");
-    } catch (err) {
-      console.error("Error al obtener token para el socket:", err);
-    }
-  };
-
-  conectarSocket();
-
-  // Limpieza al desmontar
-  return () => {
-    socket.disconnect();
-  };
-}, [user, loading]); // Dependencias correctas
-
-  // 2. CARGA SEGURA DEL HISTORIAL
-  useEffect(() => {
-    const cargarHistorialMensajes = async () => {
-      if (loading) return;
-      if (!user || !chatId) {
-        setMensajes([]);
-        return;
-      }
-      
-      try {
-        setCargando(true);
-        const token = await user.getIdToken();
-        
-        // Usamos API_BASE en lugar de la url hardcoded
-        const response = await fetch(`${API_BASE}/chats/${chatId}/mensajes`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        if (response.ok) {
-          const historial = await response.json();
-          setMensajes(historial);
-        }
-      } catch (err) {
-        console.error("Error cargando historial:", err);
-      } finally {
-        setCargando(false);
-      }
-    };
-
-    cargarHistorialMensajes();
-  }, [chatId, loading, user]);
-
-  // 3. Unirse a la sala
-  useEffect(() => {
-    if (!chatId || loading) return;
-
-    socket.emit("join_room", chatId);
-
-    socket.on("recibir_mensaje", (nuevoMensaje) => {
-      if (nuevoMensaje.chatId === chatId) {
-        setMensajes((prev) => [...prev, nuevoMensaje]);
-      }
-    });
-
-    return () => {
-      socket.off("recibir_mensaje");
-    };
-  }, [chatId, loading]);
-
-  // 4. Cargar Vendedor
+  // 3. Cargar datos del Vendedor (Se mantiene igual)
   useEffect(() => {
     const cargarVendedor = async () => {
       if (loading || !vendedorId) return;
@@ -140,43 +56,26 @@ useEffect(() => {
     cargarVendedor();
   }, [vendedorId, loading]);
 
-  const handleEnviarMensaje = () => {
-    if (!mensaje.trim() || !chatId || !user || !vendedorId) return;
-
-    const miNombre = profile?.nombre && profile?.apellido 
-      ? `${profile.nombre} ${profile.apellido}` 
-      : (user.displayName || "Estudiante EPN");
-
-    const suNombre = vendedor?.nombre && vendedor?.apellido 
-      ? `${vendedor.nombre} ${vendedor.apellido}` 
-      : (vendedor?.fullName || vendedor?.nombre || "Usuario EPN");
-
-    const payloadMensaje = {
-      chatId: chatId,
-      texto: mensaje.trim(),
-      remitenteId: user.uid,
-      destinatarioId: vendedorId,
-      nombreRemitente: miNombre,
-      nombreDestinatario: suNombre,
-      timestamp: new Date().toISOString(),
-    };
-
-    socket.emit("enviar_mensaje", payloadMensaje);
+  // 4. Enviar mensaje usando el Contexto Global
+  const handleEnviarMensaje = async () => {
+    if (!mensaje.trim() || !chatActivoId || !user) return;
+    
+    // El contexto se encarga de enviarlo a Firebase automáticamente
+    await enviarMensaje(mensaje);
     setMensaje(""); 
   };
 
   return (
-    // ... resto de tu JSX se mantiene exactamente igual
     <div className="min-h-screen bg-[#0a0a1a] text-white flex h-screen overflow-hidden">
-        {/* Tu código JSX permanece intacto aquí */}
         <ChatSidebar 
-        chatActivoId={chatId} 
-        onSeleccionarChat={(otroId) => navigate(`/chat/${otroId}`)} 
+          chatActivoId={chatActivoId} 
+          onSeleccionarChat={(otroId) => navigate(`/chat/${otroId}`)} 
         />
 
         <div className="flex-1 flex flex-col h-full bg-black/10">
         {vendedorId ? (
             <>
+            {/* Cabecera */}
             <div className="bg-white/5 border-b border-white/10 px-6 py-4 flex items-center justify-between shadow-sm">
                 <div className="flex items-center gap-4">
                 <button onClick={() => navigate(-1)} className="text-gray-400 hover:text-white transition text-2xl md:hidden">←</button>
@@ -184,14 +83,16 @@ useEffect(() => {
                     <p className="text-white font-bold text-base">
                     {vendedor?.nombre ? `${vendedor.nombre} ${vendedor.apellido}` : (vendedor?.fullName || "Cargando...")}
                     </p>
-                    <p className="text-green-400 text-xs flex items-center gap-1">● WebSocket Conectado</p>
+                    {/* Cambiamos el texto porque ahora usamos Firebase */}
+                    <p className="text-green-400 text-xs flex items-center gap-1">● Chat Sincronizado</p>
                 </div>
                 </div>
             </div>
 
+            {/* Lista de Mensajes (Ahora lee directamente del Contexto Global) */}
             <div ref={contenedorMensajesRef} className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
-                {cargando ? (
-                <div className="text-center text-gray-500 py-12 animate-pulse">Cargando conversación segura...</div>
+                {mensajes.length === 0 ? (
+                  <div className="text-center text-gray-500 py-12">No hay mensajes aún. ¡Escribe el primero!</div>
                 ) : mensajes.map((m, index) => (
                 <div key={m.id || index} className={`flex ${m.remitenteId === user?.uid ? "justify-end" : "justify-start"}`}>
                     <div className={`px-4 py-2.5 rounded-2xl max-w-xs text-sm ${m.remitenteId === user?.uid ? "bg-purple-600 text-white rounded-tr-none" : "bg-white/10 text-white rounded-tl-none"}`}>
@@ -201,6 +102,7 @@ useEffect(() => {
                 ))}
             </div>
 
+            {/* Input */}
             <div className="border-t border-white/10 bg-white/5 px-6 py-4">
                 <div className="flex gap-3">
                 <input
