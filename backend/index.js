@@ -51,12 +51,17 @@ app.use("/api/chats", verificarFirebaseToken, chatRoutes);
 
 // --- SERVIR FRONTEND ---
 // 1. Servir archivos estáticos desde la carpeta 'dist' (la carpeta que genera npm run build)
-app.use(express.static(path.join(__dirname, "dist")));
+// Ajusta la ruta para que salga de 'backend' y entre en 'frontend/dist'
+// Si tu carpeta de frontend se llama distinto, cámbialo en 'frontend'
+const distPath = path.join(__dirname, "../frontend/dist"); 
 
-// 2. Ruta comodín (Catch-all)
-// Si la petición no coincide con ninguna ruta de /api, devolvemos index.html
+console.log("Intentando servir archivos desde:", distPath);
+
+app.use(express.static(distPath));
+
+// La ruta comodín sigue igual, pero usando la misma variable
 app.get(/.*/, (req, res) => {
-  res.sendFile(path.join(__dirname, "dist", "index.html"));
+  res.sendFile(path.join(distPath, "index.html"));
 });
 // --- SOCKETS ---
 const io = new Server(server, {
