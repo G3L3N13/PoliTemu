@@ -6,6 +6,9 @@ import { useAuth } from "../context/AuthContext";
 import { doc, getDoc } from "firebase/firestore";
 import owlLogo from "../assets/logo_buho.png";
 
+// Componentes
+import CartIcon from "./common/CartIcon"; 
+
 function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -16,12 +19,12 @@ function Navbar() {
   useEffect(() => {
     const checkAdmin = async () => {
       if (user) {
-        const userDoc = await getDoc(doc(db, "usuarios", user.uid));
-
-        setIsAdmin(
-          userDoc.exists() &&
-          userDoc.data().rol === "admin"
-        );
+        try {
+          const userDoc = await getDoc(doc(db, "usuarios", user.uid));
+          setIsAdmin(userDoc.exists() && userDoc.data().rol === "admin");
+        } catch (error) {
+          console.error("Error verificando rol:", error);
+        }
       } else {
         setIsAdmin(false);
       }
@@ -36,88 +39,71 @@ function Navbar() {
   };
 
   return (
-    <nav className="fixed top-0 left-0 w-full z-50 bg-[#0a0a1a]/90 backdrop-blur-lg border-b border-white/10">
-      <div className="max-w-7xl mx-auto flex items-center justify-between px-6 py-3">
+    <nav className="bg-blue-950 border-b border-white/10 px-6 py-3 flex items-center justify-between relative">
+      {/* Logo */}
+      <Link to="/" className="text-xl font-black text-white tracking-tight">
+        Poli<span className="text-yellow-400">Temu</span>
+      </Link>
 
-        {/* LOGO */}
-        <Link to="/home" className="flex items-center gap-3">
-          <img
-            src={owlLogo}
-            alt="PoliTemu"
-            className="w-10 h-10 object-contain"
-          />
+      {/* Botón menú hamburguesa (Mobile) */}
+      <button className="md:hidden text-white text-2xl" onClick={() => setOpen(!open)}>
+        ☰
+      </button>
 
-          <span className="text-2xl font-black text-white tracking-tight">
-            POLI<span className="text-yellow-400">TEMU</span>
-          </span>
-        </Link>
+      {/* Menú de navegación (Desktop) */}
+      <ul className="hidden md:flex items-center gap-6 text-sm">
+        <li>
+          <Link to="/" className="text-blue-200 hover:text-yellow-400">Inicio</Link>
+        </li>
+        
+        {user ? (
+          <>
+            <li>
+              <Link to="/home" className="text-blue-200 hover:text-yellow-400">Catálogo</Link>
+            </li>
+            
+            {/* NUEVO: Enlace directo al Chat */}
+            <li>
+              <Link to="/chat" className="text-blue-200 hover:text-yellow-400 flex items-center gap-1">
+                <span>💬</span> Chat
+              </Link>
+            </li>
 
-        {/* MENÚ DESKTOP */}
-        <div className="hidden md:flex items-center gap-8 text-sm">
+            {isAdmin && (
+              <li>
+                <Link to="/dashboard" className="text-yellow-400 font-bold">Dashboard</Link>
+              </li>
+            )}
+            
+            <li>
+              <Link to="/profile" className="text-blue-200 hover:text-yellow-400">Perfil</Link>
+            </li>
+            
+            {/* Ícono de carrito */}
+            <li className="flex items-center">
+              <CartIcon />
+            </li>
 
-          <Link
-            to="/home"
-            className="text-gray-300 hover:text-yellow-400 transition"
-          >
-            Catálogo
-          </Link>
-
-          <Link
-            to="/profile"
-            className="text-gray-300 hover:text-yellow-400 transition"
-          >
-            Mi Perfil
-          </Link>
-
-          {isAdmin && (
-            <Link
-              to="/dashboard"
-              className="text-yellow-400 font-bold"
-            >
-              Dashboard
-            </Link>
-          )}
-
-          <button
-            onClick={handleLogout}
-            className="bg-purple-600 hover:bg-purple-500 text-white px-5 py-2 rounded-xl font-semibold transition"
-          >
-            Salir
-          </button>
-        </div>
-
-        {/* BOTÓN MÓVIL */}
-        <button
-          className="md:hidden text-white text-2xl"
-          onClick={() => setMenuOpen(!menuOpen)}
-        >
-          ☰
-        </button>
-      </div>
-
-      {/* MENÚ MÓVIL */}
-      {menuOpen && (
-        <div className="md:hidden bg-[#0a0a1a] border-t border-white/10 px-6 py-4 flex flex-col gap-4">
-
-          <Link to="/home">Catálogo</Link>
-
-          <Link to="/profile">Mi Perfil</Link>
-
-          {isAdmin && (
-            <Link to="/dashboard">
-              Dashboard
-            </Link>
-          )}
-
-          <button
-            onClick={handleLogout}
-            className="bg-purple-600 text-white py-2 rounded-xl"
-          >
-            Salir
-          </button>
-
-        </div>
-      )}
+            <li>
+              <button 
+                onClick={handleLogout} 
+                className="bg-yellow-400 text-blue-900 font-bold px-4 py-1.5 rounded-lg hover:bg-yellow-300 transition-colors"
+              >
+                Salir
+              </button>
+            </li>
+          </>
+        ) : (
+          <>
+            <li><Link to="/login" className="text-blue-200 hover:text-white">Login</Link></li>
+            <li>
+              <Link to="/register" className="bg-yellow-400 text-blue-900 font-bold px-4 py-1.5 rounded-lg hover:bg-yellow-300 transition-colors">
+                Registro
+              </Link>
+            </li>
+          </>
+        )}
+      </ul>
     </nav>
   );
 }

@@ -9,5 +9,5 @@ export default defineConfig({
       "/api": "http://localhost:3000", // solo para desarrollo
     },
   },
-  base: "./", // importante para rutas relativas en Render
+  base: "/", // importante para rutas relativas en Render
 });

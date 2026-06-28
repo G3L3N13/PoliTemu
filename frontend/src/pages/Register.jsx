@@ -54,25 +54,39 @@ function Register() {
 
     setLoading(true);
     try {
-      // Crear usuario en Firebase Auth
+      // 1. Crear usuario en Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, formData.email.trim(), formData.password);
       const user = userCredential.user;
 
-      await fetch("http://localhost:3000/api/usuarios/profile/create", {
+      // 🔥 CORRECCIÓN 1: Obtener el token real de Firebase del usuario recién creado
+      const token = await user.getIdToken();
+
+      // 🔥 CORRECCIÓN 2: Separar el fullName de forma limpia en nombre y apellido
+      const partesNombre = formData.fullName.trim().split(" ");
+      const nombre = partesNombre[0] || "";
+      const apellido = partesNombre.slice(1).join(" ") || " ";
+
+      // 2. Registrar el perfil del estudiante en el Backend
+      const response = await fetch("http://localhost:3000/api/usuarios/profile/create", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          "Authorization": `Bearer ${token}`, // Ahora 'token' sí existe
         },
         body: JSON.stringify({
-          nombre,
-          apellido,
+          nombre,          // Ahora 'nombre' sí existe
+          apellido,        // Ahora 'apellido' sí existe
           telefono: formData.telefono,
           ciudad: formData.ciudad,
           direccion: formData.direccion,
           descripcion: formData.descripcion,
         }),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Error al sincronizar perfil con el servidor.");
+      }
 
       navigate("/verify-email");
     } catch (err) {

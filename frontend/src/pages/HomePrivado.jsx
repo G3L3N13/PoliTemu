@@ -20,7 +20,7 @@ function HomePrivado() {
     { titulo: "Carrito",        descripcion: "Revisa tus compras",      ruta: "/carrito",   icon: <ShoppingCart size={28} />, color: "from-yellow-500/20 to-yellow-700/10", border: "hover:border-yellow-500/50" },
     { titulo: "Ofertas",        descripcion: "Promociones especiales",  ruta: "/ofertas",   icon: <Tag size={28} />, color: "from-green-600/20 to-green-800/10", border: "hover:border-green-500/50" },
     { titulo: "Mi Perfil",      descripcion: "Gestiona tu cuenta",      ruta: "/profile",   icon: <User size={28} />, color: "from-blue-600/20 to-blue-800/10", border: "hover:border-blue-500/50" },
-    { titulo: "Vender",         descripcion: "Publica un artículo",     ruta: "/vender",     icon: <Plus size={28} />, color: "from-pink-600/20 to-pink-800/10", border: "hover:border-pink-500/50" },
+    { titulo: "Vender",         descripcion: "Publica un artículo",     ruta: "/admin",     icon: <Plus size={28} />, color: "from-pink-600/20 to-pink-800/10", border: "hover:border-pink-500/50" },
   ];
 
   // 🔥 FUNCIÓN MEJORADA PARA OBTENER IMÁGENES
@@ -334,3 +334,4 @@ function HomePrivado() {
 }
 
 export default HomePrivado;
+

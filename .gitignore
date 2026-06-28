@@ -1,17 +1,28 @@
-﻿# Carpetas comunes
+﻿# Node
 node_modules/
+npm-debug.log*
+yarn-error.log
+pnpm-lock.yaml
+
+# Builds
 dist/
-.vercel/
-.env*
+build/
+
+# Env
+.env
 .env.local
-.env.production
+.env.*.local
 
-# Backend
-backend/config/serviceAccountKey.json
-backend/node_modules/
-backend/.env*
+# Firebase service account
+serviceAccountKey.json
+*.key
+*.pem
 
-# Frontend
-frontend/node_modules/
-frontend/dist/
-frontend/.env*
+# OS / Editor
+.DS_Store
+.vscode/
+.idea/
+*.log
+
+# Misc
+coverage/

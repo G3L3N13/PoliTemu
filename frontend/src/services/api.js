@@ -1,19 +1,30 @@
+// src/services/api.js
 import axios from "axios";
 import { auth } from "./firebase";
 
+// 1. Configuración de la URL base
+// Asegúrate de tener un archivo .env en la raíz con: VITE_API_URL=http://localhost:3000/api
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+
+console.log("🚀 URL de API detectada:", API_URL);
+
 const API = axios.create({
-  baseURL: "http://localhost:3000/api",
+  baseURL: API_URL,
 });
 
-// Agregar automáticamente el token a cada petición
+// 2. Interceptor de Request: Agrega automáticamente el token a cada petición
+// En tu interceptor:
 API.interceptors.request.use(
   async (config) => {
     const user = auth.currentUser;
+    console.log("Usuario actual:", user ? user.email : "No hay usuario");
 
     if (user) {
       const token = await user.getIdToken();
-
+      console.log("Token enviado:", token ? "Token generado correctamente" : "No se pudo generar");
       config.headers.Authorization = `Bearer ${token}`;
+    } else {
+      console.warn("Petición realizada sin usuario autenticado");
     }
 
     return config;
@@ -21,9 +32,29 @@ API.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// 3. Interceptor de Response: Manejo centralizado de errores
+API.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Si recibimos un 401, la sesión ha expirado o el usuario no está autorizado
+    if (error.response?.status === 401) {
+      console.warn("Sesión expirada o falta de autorización.");
+      // Opcional: podrías redirigir al usuario al login aquí
+    }
+    return Promise.reject(error);
+  }
+);
+
+// --- SERVICIOS ---
+
 export const productosService = {
   getTodos: async () => {
     const respuesta = await API.get("/productos");
+    return respuesta.data;
+  },
+
+  getMisProductos: async () => {
+    const respuesta = await API.get("/productos/vendedor/mis-productos");
     return respuesta.data;
   },
 
@@ -31,15 +62,21 @@ export const productosService = {
     const respuesta = await API.post("/productos", datosProducto);
     return respuesta.data;
   },
-  misProductos: async () => {
-    const response = await API.get("/productos/vendedor/mis-productos");
-    return response.data;
-  }
+
+  actualizar: async (id, datos) => {
+    const respuesta = await API.put(`/productos/${id}`, datos);
+    return respuesta.data;
+  },
+
+  eliminar: async (id) => {
+    const respuesta = await API.delete(`/productos/${id}`);
+    return respuesta.data;
+  },
 };
 
 export const usuariosService = {
-  obtenerMiPerfil: async (config = {}) => {
-    const respuesta = await API.get("/usuarios/profile/me", config);
+  obtenerMiPerfil: async () => {
+    const respuesta = await API.get("/usuarios/profile/me");
     return respuesta.data;
   },
 
@@ -109,19 +146,12 @@ export const carritoService = {
   },
 
   actualizar: async (productoId, cantidad) => {
-    const response = await API.put(
-      `/carrito/${productoId}`,
-      { cantidad }
-    );
-
+    const response = await API.put(`/carrito/${productoId}`, { cantidad });
     return response.data;
   },
 
   eliminar: async (productoId) => {
-    const response = await API.delete(
-      `/carrito/${productoId}`
-    );
-
+    const response = await API.delete(`/carrito/${productoId}`);
     return response.data;
   },
 

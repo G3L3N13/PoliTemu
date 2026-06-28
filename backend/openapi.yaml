@@ -1,0 +1,585 @@
+openapi: 3.0.3
+info:
+  title: Marketplace API - Full
+  version: 1.0.0
+  description: API para usuarios, productos, carrito, ofertas y perfil
+servers:
+  - url: http://localhost:3000
+
+paths:
+  /api/usuarios:
+    get:
+      summary: Listar todos los usuarios
+      responses:
+        '200':
+          description: Lista de usuarios
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Usuario'
+    post:
+      summary: Registrar nuevo usuario (manual)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UsuarioCreate'
+      responses:
+        '201':
+          description: Usuario creado
+
+  /api/usuarios/{id}:
+    get:
+      summary: Obtener usuario por id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Usuario encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Usuario'
+        '404':
+          description: Usuario no encontrado
+    put:
+      summary: Actualizar usuario por id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Usuario actualizado
+    delete:
+      summary: Eliminar usuario por id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Usuario eliminado
+
+  /api/usuarios/profile/me:
+    get:
+      summary: Obtener perfil del usuario autenticado
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Perfil del usuario autenticado
+    put:
+      summary: Actualizar perfil del usuario autenticado
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Perfil actualizado
+
+  /api/usuarios/profile/create:
+    post:
+      summary: Crear o completar perfil al registrarse (protegido)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UsuarioCreate'
+      responses:
+        '200':
+          description: Perfil creado/actualizado
+
+  /api/usuarios/{id}/ventas:
+    patch:
+      summary: Incrementar contador de ventas del usuario
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Contador de ventas incrementado
+
+  /api/usuarios/{id}/compras:
+    patch:
+      summary: Incrementar contador de compras del usuario
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Contador de compras incrementado
+
+  /api/usuarios/role:
+    get:
+      summary: Obtener rol/isAdmin del usuario autenticado
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Estado de administrador
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  isAdmin:
+                    type: boolean
+
+  /api/productos:
+    get:
+      summary: Listar productos (opcional filtro vendedorId)
+      parameters:
+        - name: vendedorId
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de productos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Producto'
+    post:
+      summary: Crear producto (protegido)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductoCreate'
+      responses:
+        '201':
+          description: Producto creado
+
+  /api/productos/vendedor/mis-productos:
+    get:
+      summary: Listar productos del vendedor autenticado
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Productos del vendedor
+
+  /api/productos/buscar/{nombre}:
+    get:
+      summary: Buscar productos por nombre
+      parameters:
+        - name: nombre
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Resultados de búsqueda
+
+  /api/productos/categoria/{categoria}:
+    get:
+      summary: Buscar productos por categoría
+      parameters:
+        - name: categoria
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Productos por categoría
+
+  /api/productos/precio/min/{min}/max/{max}:
+    get:
+      summary: Filtrar productos por rango de precio
+      parameters:
+        - name: min
+          in: path
+          required: true
+          schema:
+            type: number
+        - name: max
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        '200':
+          description: Productos en rango de precio
+
+  /api/productos/stock/bajo:
+    get:
+      summary: Listar productos con stock bajo
+      responses:
+        '200':
+          description: Productos con stock bajo
+
+  /api/productos/{id}:
+    get:
+      summary: Obtener producto por id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Producto encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Producto'
+        '404':
+          description: Producto no encontrado
+    put:
+      summary: Actualizar producto (solo vendedor)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Producto actualizado
+    delete:
+      summary: Eliminar producto (solo vendedor)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Producto eliminado
+
+  /api/productos/{id}/stock:
+    patch:
+      summary: Actualizar stock (solo vendedor)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                stock:
+                  type: integer
+      responses:
+        '200':
+          description: Stock actualizado
+
+  /api/productos/{id}/precio:
+    patch:
+      summary: Actualizar precio (solo vendedor)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                precio:
+                  type: number
+      responses:
+        '200':
+          description: Precio actualizado
+
+  /api/productos/{id}/vendido:
+    patch:
+      summary: Marcar producto como vendido (solo vendedor)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Producto marcado como vendido
+
+  /api/carrito:
+    get:
+      summary: Obtener carrito del usuario autenticado
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Carrito del usuario
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Carrito'
+    post:
+      summary: Agregar item al carrito
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                productId:
+                  type: string
+                quantity:
+                  type: integer
+      responses:
+        '200':
+          description: Item agregado
+
+  /api/ofertas:
+    get:
+      summary: Listar ofertas (opcional filtro vendedorId)
+      parameters:
+        - name: vendedorId
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de ofertas
+    post:
+      summary: Crear oferta (protegido)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                productoId:
+                  type: string
+                ofertaPrecio:
+                  type: number
+      responses:
+        '201':
+          description: Oferta creada
+
+  /api/perfil:
+    get:
+      summary: Obtener perfil del usuario autenticado
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Perfil del usuario autenticado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  email:
+                    type: string
+                  rol:
+                    type: string
+    put:
+      summary: Actualizar perfil del usuario autenticado
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nombre:
+                  type: string
+                telefono:
+                  type: string
+                ciudad:
+                  type: string
+      responses:
+        '200':
+          description: Perfil actualizado correctamente
+    delete:
+      summary: Eliminar perfil del usuario autenticado
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Perfil eliminado correctamente
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Usuario:
+      type: object
+      properties:
+        id:
+          type: string
+        uid:
+          type: string
+        nombre:
+          type: string
+        apellido:
+          type: string
+        email:
+          type: string
+        telefono:
+          type: string
+        ciudad:
+          type: string
+        direccion:
+          type: string
+        carrera:
+          type: string
+        fotoPerfil:
+          type: string
+        descripcion:
+          type: string
+        rut:
+          type: string
+        calificacion:
+          type: number
+        totalVentas:
+          type: integer
+        totalCompras:
+          type: integer
+        fechaRegistro:
+          type: string
+        estado:
+          type: string
+
+    UsuarioCreate:
+      type: object
+      required:
+        - nombre
+        - apellido
+        - telefono
+      properties:
+        nombre:
+          type: string
+        apellido:
+          type: string
+        telefono:
+          type: string
+        ciudad:
+          type: string
+        direccion:
+          type: string
+        carrera:
+          type: string
+        fotoPerfil:
+          type: string
+        descripcion:
+          type: string
+        rut:
+          type: string
+
+    Producto:
+      type: object
+      properties:
+        id:
+          type: string
+        nombre:
+          type: string
+        descripcion:
+          type: string
+        precio:
+          type: number
+        stock:
+          type: integer
+        categoria:
+          type: string
+        vendedorId:
+          type: string
+        vendedorNombre:
+          type: string
+        estado:
+          type: string
+
+    ProductoCreate:
+      type: object
+      required:
+        - nombre
+        - precio
+      properties:
+        nombre:
+          type: string
+        precio:
+          type: number
+        stock:
+          type: integer
+        categoria:
+          type: string
+        descripcion:
+          type: string
+
+    Carrito:
+      type: object
+      properties:
+        userId:
+          type: string
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              productId:
+                type: string
+              quantity:
+                type: integer

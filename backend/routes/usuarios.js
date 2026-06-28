@@ -16,7 +16,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-// Obtener perfil del usuario autenticado
+// 🔥 SOLUCIÓN AL 404: Obtener perfil del usuario autenticado
 router.get("/profile/me", verificarFirebaseToken, async (req, res) => {
   try {
     const { uid } = req.user;
@@ -33,6 +33,60 @@ router.get("/profile/me", verificarFirebaseToken, async (req, res) => {
   }
 });
 
+// 🔥 SOLUCIÓN AL PERMISSION DENIED: Endpoint público para datos de un vendedor/usuario
+// Se coloca ANTES de /:id para interceptar correctamente la ruta
+router.get("/datos/:uid", async (req, res) => {
+  try {
+    const { uid } = req.params;
+    const doc = await db.collection("usuarios").doc(uid).get();
+    
+    if (!doc.exists) {
+      return res.status(404).json({ error: "Usuario no encontrado" });
+    }
+    
+    res.json({ id: doc.id, ...doc.data() });
+  } catch (error) {
+    console.error("Error al obtener datos públicos del usuario:", error);
+    res.status(500).json({ error: "Error al obtener datos del usuario" });
+  }
+});
+
+// 🔥 ENDPOINT PARA LA BARRA LATERAL DEL CHAT
+// Recupera todas las salas de chat activas donde participa este estudiante
+router.get("/chats/:uid", async (req, res) => {
+  try {
+    const { uid } = req.params;
+
+    const chatsSnapshot = await db.collection("chats")
+      .where("participantes", "array-contains", uid)
+      .get();
+
+    if (chatsSnapshot.empty) {
+      return res.json([]); 
+    }
+
+    const listaChats = chatsSnapshot.docs.map(doc => {
+      const datos = doc.data();
+      const otroParticipanteId = datos.participantes?.find(id => id !== uid) || "";
+
+      return {
+        id: doc.id,
+        otroParticipanteId,
+        ultimoMensaje: datos.ultimoMensaje || "Sin mensajes aún",
+        ultimaActividad: datos.ultimaActividad || new Date().toISOString(),
+        nombresParticipantes: datos.nombresParticipantes || {}
+      };
+    });
+
+    listaChats.sort((a, b) => new Date(b.ultimaActividad) - new Date(a.ultimaActividad));
+
+    res.json(listaChats);
+  } catch (error) {
+    console.error("Error en GET /api/usuarios/chats/:uid:", error);
+    res.status(500).json({ error: "Error al obtener historial de chats" });
+  }
+});
+
 // Obtener usuario por ID
 router.get("/:id", async (req, res) => {
   try {
@@ -45,7 +99,6 @@ router.get("/:id", async (req, res) => {
     res.status(500).json({ error: "Error al obtener usuario" });
   }
 });
-
 
 // Crear o actualizar perfil de usuario (al registrarse o completar datos)
 router.post("/profile/create", verificarFirebaseToken, async (req, res) => {
@@ -63,7 +116,6 @@ router.post("/profile/create", verificarFirebaseToken, async (req, res) => {
       rut
     } = req.body;
 
-    // Validar campos obligatorios
     if (!nombre || !apellido || !telefono) {
       return res.status(400).json({ error: "Nombre, apellido y teléfono son obligatorios" });
     }
@@ -109,8 +161,6 @@ router.put("/profile/me", verificarFirebaseToken, async (req, res) => {
   try {
     const { uid } = req.user;
     const datosActualizados = req.body;
-
-    // No permitir cambiar ciertos campos
     delete datosActualizados.uid;
     delete datosActualizados.email;
     delete datosActualizados.calificacion;
@@ -197,22 +247,18 @@ router.patch("/:id/compras", async (req, res) => {
   }
 });
 
-///////
-// GET /api/user/role
+// GET /api/usuarios/role
 router.get("/role", verificarFirebaseToken, async (req, res) => {
   try {
-    // req.user viene del middleware (uid, email, name, etc.)
     const uid = req.user?.uid;
     if (!uid) return res.status(400).json({ error: "Usuario no autenticado" });
 
-    // Opción A: si guardas rol en colección users
     const userDoc = await db.collection("usuarios").doc(uid).get();
     if (!userDoc.exists) {
-      // Si no existe, asumimos no admin
       return res.json({ isAdmin: false });
     }
     const userData = userDoc.data();
-    const isAdmin = Boolean(userData?.role === "admin" || userData?.isAdmin); //
+    const isAdmin = Boolean(userData?.role === "admin" || userData?.isAdmin);
 
     return res.json({ isAdmin });
   } catch (err) {
@@ -221,53 +267,5 @@ router.get("/role", verificarFirebaseToken, async (req, res) => {
   }
 });
 
-router.get("/admin/stats", async (req, res) => {
-  try {
-    const usuarios = await db.collection("usuarios").get();
-    const productos = await db.collection("productos").get();
-
-    const totalUsuarios = usuarios.size;
-    const totalProductos = productos.size;
-
-    const productosOferta = productos.docs.filter(
-      doc => doc.data().enOferta === true
-    ).length;
-
-    res.json({
-      totalUsuarios,
-      totalProductos,
-      productosOferta
-    });
-
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      error: "Error obteniendo estadísticas"
-    });
-  }
-});
-
-router.get("/admin/stats", async (req, res) => {
-  try {
-
-    const usuarios = await db.collection("usuarios").get();
-    const productos = await db.collection("productos").get();
-
-    const productosOferta = productos.docs.filter(
-      doc => doc.data().enOferta === true
-    );
-
-    res.json({
-      usuarios: usuarios.size,
-      productos: productos.size,
-      ofertas: productosOferta.length
-    });
-
-  } catch (error) {
-    res.status(500).json({
-      error: "Error al obtener estadísticas"
-    });
-  }
-});
 
 export default router;
