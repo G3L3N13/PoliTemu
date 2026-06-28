@@ -21,8 +21,10 @@ function SellerProfile() {
 
       try {
         // Cargar datos del vendedor desde backend público
-        const base = import.meta.env.VITE_API_URL || "";
-        const { data } = await axios.get(`${base}/api/usuarios/${vendedorId}`);
+       // Cambia esto en SellerProfile.jsx
+// Si VITE_API_URL termina en /api, esto lo limpia
+        const baseURL = import.meta.env.VITE_API_URL.replace(/\/api$/, ""); 
+        const { data } = await axios.get(`${baseURL}/api/usuarios/${vendedorId}`);
         if (!mounted) return;
         setVendedor(data);
 

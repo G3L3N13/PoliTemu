@@ -1,17 +1,23 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { db, auth } from "../services/firebase"; // Asegúrate de importar auth
+import { db } from "../services/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import ChatSidebar from "../components/chat/ChatSidebar";
 import { io } from "socket.io-client";
 
-const socket = io("http://localhost:3000", { autoConnect: false });
+// --- CONFIGURACIÓN DINÁMICA ---
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000";
+// Si la URL es https://.../api, el socket debe ir a https://...
+const SOCKET_URL = API_BASE.replace("/api", ""); 
+
+const socket = io(SOCKET_URL, { autoConnect: false });
+// ------------------------------
 
 function ChatPage() {
   const { vendedorId } = useParams();
   const navigate = useNavigate();
-  const { user, profile, loading } = useAuth(); // Importamos loading
+  const { user, profile, loading } = useAuth();
   const [vendedor, setVendedor] = useState(null);
   const [mensaje, setMensaje] = useState("");
   const [cargando, setCargando] = useState(false);
@@ -35,7 +41,7 @@ function ChatPage() {
 
   // 1. Conexión WebSocket
   useEffect(() => {
-    if (loading) return; // Esperar a que cargue la sesión
+    if (loading) return;
     if (user) {
       socket.connect(); 
     }
@@ -44,10 +50,10 @@ function ChatPage() {
     };
   }, [user, loading]);
 
-  // 2. 🔥 CARGA SEGURA DEL HISTORIAL (Corregido: Incluye Auth y Guardia)
+  // 2. CARGA SEGURA DEL HISTORIAL
   useEffect(() => {
     const cargarHistorialMensajes = async () => {
-      if (loading) return; // NO HACER NADA si está cargando
+      if (loading) return;
       if (!user || !chatId) {
         setMensajes([]);
         return;
@@ -55,14 +61,14 @@ function ChatPage() {
       
       try {
         setCargando(true);
-        // Obtener token para la petición
         const token = await user.getIdToken();
         
-        const response = await fetch(`http://localhost:3000/api/chats/${chatId}/mensajes`, {
+        // Usamos API_BASE en lugar de la url hardcoded
+        const response = await fetch(`${API_BASE}/chats/${chatId}/mensajes`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}` // Aquí se autoriza la petición
+            'Authorization': `Bearer ${token}`
           }
         });
         
@@ -97,7 +103,7 @@ function ChatPage() {
     };
   }, [chatId, loading]);
 
-  // 4. Cargar Vendedor (Guardia añadida)
+  // 4. Cargar Vendedor
   useEffect(() => {
     const cargarVendedor = async () => {
       if (loading || !vendedorId) return;
@@ -142,62 +148,64 @@ function ChatPage() {
   };
 
   return (
+    // ... resto de tu JSX se mantiene exactamente igual
     <div className="min-h-screen bg-[#0a0a1a] text-white flex h-screen overflow-hidden">
-      <ChatSidebar 
+        {/* Tu código JSX permanece intacto aquí */}
+        <ChatSidebar 
         chatActivoId={chatId} 
         onSeleccionarChat={(otroId) => navigate(`/chat/${otroId}`)} 
-      />
+        />
 
-      <div className="flex-1 flex flex-col h-full bg-black/10">
+        <div className="flex-1 flex flex-col h-full bg-black/10">
         {vendedorId ? (
-          <>
+            <>
             <div className="bg-white/5 border-b border-white/10 px-6 py-4 flex items-center justify-between shadow-sm">
-              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4">
                 <button onClick={() => navigate(-1)} className="text-gray-400 hover:text-white transition text-2xl md:hidden">←</button>
                 <div>
-                  <p className="text-white font-bold text-base">
+                    <p className="text-white font-bold text-base">
                     {vendedor?.nombre ? `${vendedor.nombre} ${vendedor.apellido}` : (vendedor?.fullName || "Cargando...")}
-                  </p>
-                  <p className="text-green-400 text-xs flex items-center gap-1">● WebSocket Conectado</p>
+                    </p>
+                    <p className="text-green-400 text-xs flex items-center gap-1">● WebSocket Conectado</p>
                 </div>
-              </div>
+                </div>
             </div>
 
             <div ref={contenedorMensajesRef} className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
-              {cargando ? (
+                {cargando ? (
                 <div className="text-center text-gray-500 py-12 animate-pulse">Cargando conversación segura...</div>
-              ) : mensajes.map((m, index) => (
+                ) : mensajes.map((m, index) => (
                 <div key={m.id || index} className={`flex ${m.remitenteId === user?.uid ? "justify-end" : "justify-start"}`}>
-                  <div className={`px-4 py-2.5 rounded-2xl max-w-xs text-sm ${m.remitenteId === user?.uid ? "bg-purple-600 text-white rounded-tr-none" : "bg-white/10 text-white rounded-tl-none"}`}>
+                    <div className={`px-4 py-2.5 rounded-2xl max-w-xs text-sm ${m.remitenteId === user?.uid ? "bg-purple-600 text-white rounded-tr-none" : "bg-white/10 text-white rounded-tl-none"}`}>
                     {m.texto}
-                  </div>
+                    </div>
                 </div>
-              ))}
+                ))}
             </div>
 
             <div className="border-t border-white/10 bg-white/5 px-6 py-4">
-              <div className="flex gap-3">
+                <div className="flex gap-3">
                 <input
-                  type="text"
-                  value={mensaje}
-                  onChange={(e) => setMensaje(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleEnviarMensaje()}
-                  className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-4 py-3.5 text-white outline-none focus:border-purple-500 transition text-sm"
-                  placeholder="Escribe un mensaje..."
+                    type="text"
+                    value={mensaje}
+                    onChange={(e) => setMensaje(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleEnviarMensaje()}
+                    className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-4 py-3.5 text-white outline-none focus:border-purple-500 transition text-sm"
+                    placeholder="Escribe un mensaje..."
                 />
                 <button onClick={handleEnviarMensaje} className="bg-purple-600 text-white px-6 py-3.5 rounded-2xl font-bold transition text-sm">
-                  Enviar
+                    Enviar
                 </button>
-              </div>
+                </div>
             </div>
-          </>
+            </>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
-             <p className="text-6xl mb-4">📥</p>
-             <p className="font-bold text-lg text-white">Bandeja de Entrada</p>
-          </div>
+            <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
+                <p className="text-6xl mb-4">📥</p>
+                <p className="font-bold text-lg text-white">Bandeja de Entrada</p>
+            </div>
         )}
-      </div>
+        </div>
     </div>
   );
 }
