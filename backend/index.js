@@ -3,6 +3,8 @@ import http from "http";
 import { Server } from "socket.io";
 import cors from "cors";
 import morgan from "morgan";
+import path from "path"; // Importante para manejar rutas de archivos
+import { fileURLToPath } from "url"; // Importante para __dirname en ES Modules
 import { db } from "./config/firebase.js";
 import { verificarFirebaseToken } from "./middlewares/authMiddleware.js";
 
@@ -14,22 +16,24 @@ import perfilRoutes from "./routes/perfil.js";
 import usuariosRoutes from "./routes/usuarios.js";
 import chatRoutes from "./routes/chat.js";
 
+// Configuración de __dirname para ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
 const server = http.createServer(app);
 
 // --- CONFIGURACIÓN CORS ---
-// 1. Definimos los orígenes permitidos
 const allowedOrigins = [
   "http://localhost:5173", 
   "http://127.0.0.1:5173", 
-  process.env.FRONTEND_URL // <-- DEBES configurar esto en Render (ej: https://politemu-public.onrender.com)
+  process.env.FRONTEND_URL 
 ].filter(Boolean);
 
-// 2. Aplicamos CORS con opciones extendidas
 app.use(cors({
   origin: allowedOrigins,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Incluimos OPTIONS
-  allowedHeaders: ["Content-Type", "Authorization"], // CRUCIAL: Autorizar el Header del Token
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
   optionsSuccessStatus: 200
 }));
@@ -37,21 +41,23 @@ app.use(cors({
 app.use(express.json());
 app.use(morgan("dev"));
 
-// --- RUTAS ---
+// --- RUTAS API (Deben ir antes de la configuración de static) ---
 app.use("/api/productos", productosRoutes);
-
-// Protegemos rutas sensibles
-// Nota: Si usuariosRoutes tiene login/registro, quizás quieras quitar el middleware allí
 app.use("/api/usuarios", usuariosRoutes);
 app.use("/api/carrito", verificarFirebaseToken, carritoRoutes);
 app.use("/api/ofertas", verificarFirebaseToken, ofertasRoutes);
 app.use("/api/perfil", verificarFirebaseToken, perfilRoutes);
 app.use("/api/chats", verificarFirebaseToken, chatRoutes);
 
-app.get("/", (req, res) => {
-  res.json({ mensaje: "Servidor backend conectado y seguro 🚀" });
-});
+// --- SERVIR FRONTEND ---
+// 1. Servir archivos estáticos desde la carpeta 'dist' (la carpeta que genera npm run build)
+app.use(express.static(path.join(__dirname, "dist")));
 
+// 2. Ruta comodín (Catch-all)
+// Si la petición no coincide con ninguna ruta de /api, devolvemos index.html
+app.get(/.*/, (req, res) => {
+  res.sendFile(path.join(__dirname, "dist", "index.html"));
+});
 // --- SOCKETS ---
 const io = new Server(server, {
   cors: {
@@ -61,12 +67,9 @@ const io = new Server(server, {
   }
 });
 
-// Middleware de autenticación para Sockets (Previene conexiones no autorizadas)
 io.use((socket, next) => {
   const token = socket.handshake.auth?.token;
-  if (!token) {
-    return next(new Error("Conexión no autorizada"));
-  }
+  if (!token) return next(new Error("Conexión no autorizada"));
   next();
 });
 
