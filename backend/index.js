@@ -43,10 +43,10 @@ app.use("/api/productos", productosRoutes);
 // Protegemos rutas sensibles
 // Nota: Si usuariosRoutes tiene login/registro, quizás quieras quitar el middleware allí
 app.use("/api/usuarios", usuariosRoutes);
-app.use("/api/carrito", verificarFirebaseToken, carritoRoutes);
-app.use("/api/ofertas", verificarFirebaseToken, ofertasRoutes);
-app.use("/api/perfil", verificarFirebaseToken, perfilRoutes);
-app.use("/api/chats", verificarFirebaseToken, chatRoutes);
+app.use("/api/carrito",  carritoRoutes);
+app.use("/api/ofertas",ofertasRoutes);
+app.use("/api/perfil",  perfilRoutes);
+app.use("/api/chats",  chatRoutes);
 
 app.get("/", (req, res) => {
   res.json({ mensaje: "Servidor backend conectado y seguro 🚀" });
