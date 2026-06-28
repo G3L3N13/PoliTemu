@@ -1,10 +1,13 @@
-// src/components/chat/ChatSidebar.jsx
 import { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { io } from "socket.io-client";
 
-// Reutilizamos la misma instancia del backend o apuntamos al puerto 3000
-const socket = io("http://localhost:3000", { autoConnect: false });
+// --- CONFIGURACIÓN DINÁMICA ---
+const API_BASE = import.meta.env.VITE_API_URL || "https://politemu-servidor.onrender.com/api";
+const SOCKET_URL = API_BASE.replace("/api", "");
+
+const socket = io(SOCKET_URL, { autoConnect: false });
+// ------------------------------
 
 export default function ChatSidebar({ chatActivoId, onSeleccionarChat }) {
   const { user } = useAuth();
@@ -14,15 +17,14 @@ export default function ChatSidebar({ chatActivoId, onSeleccionarChat }) {
   useEffect(() => {
     if (!user) return;
 
-    // 1. Conectar al WebSocket para escuchar si se actualiza la lista global de canales
+    // 1. Conectar al WebSocket
     socket.connect();
 
-    // 2. 🔥 CARGA INICIAL: Obtenemos el listado histórico desde tu backend mediante un fetch HTTP normal
+    // 2. CARGA INICIAL
     const cargarConversacionesHistoricas = async () => {
       try {
-        // Nota: Asegúrate de tener este endpoint creado en backend/routes/usuarios.js o chats.js
-        // Si no tienes el endpoint HTTP listo todavía, puedes usar la lógica temporal de abajo.
-        const response = await fetch(`http://localhost:3000/api/usuarios/chats/${user.uid}`);
+        // Usamos API_BASE en lugar de localhost
+        const response = await fetch(`${API_BASE}/usuarios/chats/${user.uid}`);
         if (response.ok) {
           const datos = await response.json();
           setConversaciones(datos);
@@ -36,10 +38,9 @@ export default function ChatSidebar({ chatActivoId, onSeleccionarChat }) {
 
     cargarConversacionesHistoricas();
 
-    // 3. 🔥 TIEMPO REAL: Escuchar si llega un mensaje que deba mover el chat arriba o actualizar el "ultimoMensaje"
+    // 3. TIEMPO REAL
     socket.on("recibir_mensaje", (nuevoMensaje) => {
       setConversaciones((prevConversaciones) => {
-        // Mapeamos para actualizar el último texto del chat correspondiente
         const existeChat = prevConversaciones.some((c) => c.id === nuevoMensaje.chatId);
 
         if (existeChat) {
@@ -52,9 +53,8 @@ export default function ChatSidebar({ chatActivoId, onSeleccionarChat }) {
               };
             }
             return chat;
-          }).sort((a, b) => new Date(b.ultimaActividad) - new Date(a.ultimaActividad)); // Reordenar arriba
+          }).sort((a, b) => new Date(b.ultimaActividad) - new Date(a.ultimaActividad));
         }
-        
         return prevConversaciones;
       });
     });
@@ -81,7 +81,6 @@ export default function ChatSidebar({ chatActivoId, onSeleccionarChat }) {
           <p className="text-gray-500 text-sm text-center py-8">No tienes mensajes pendientes.</p>
         ) : (
           conversaciones.map((chat) => {
-            // Identificar el ID de la contraparte de forma segura
             const otroParticipanteId = chat.otroParticipanteId || chat.participantes?.find((id) => id !== user.uid);
             
             return (
@@ -96,7 +95,7 @@ export default function ChatSidebar({ chatActivoId, onSeleccionarChat }) {
               >
                 <div className="flex justify-between items-center w-full mb-1">
                   <span className="font-bold text-sm truncate max-w-[150px]">
-                    {chat.nombresParticipantes?.[otroParticipanteId] || "Usuario de la EPN"}
+                    {chat.nombresParticipantes?.[otroParticipanteId] || "Usuario"}
                   </span>
                 </div>
                 <p className="text-xs truncate opacity-70 w-full">
