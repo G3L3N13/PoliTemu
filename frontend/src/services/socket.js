@@ -7,10 +7,22 @@ const SOCKET_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 // porque el socket conecta al servidor base, no a la ruta /api
 const socketEndpoint = SOCKET_URL.replace("/api", "");
 
+// ... tu código anterior ...
+
 export const socket = io(socketEndpoint, {
-  transports: ["websocket"], // Forzamos websocket para evitar problemas de polling en Render
-  autoConnect: false, // Es mejor conectarlo manualmente cuando el usuario esté listo
+  transports: ["websocket"],
+  autoConnect: false, 
   auth: {
-    token: localStorage.getItem("token") // Asegúrate de pasar el token aquí
+    token: localStorage.getItem("token") || "" // Manejo de caso vacío
   }
 });
+
+// FUNCIÓN PARA ACTUALIZAR TOKEN (Llámala cuando el usuario se loguee)
+export const updateSocketToken = (token) => {
+  socket.auth.token = token;
+  // Si el socket estaba conectado, es buena práctica reconectar
+  if (socket.connected) {
+    socket.disconnect();
+    socket.connect();
+  }
+};
