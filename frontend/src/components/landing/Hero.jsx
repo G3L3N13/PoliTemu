@@ -19,7 +19,7 @@ function Hero() {
           </span>
 
           <h1 className="text-5xl md:text-7xl font-black leading-tight text-white">
-            POLI<span className="text-yellow-400">TEMU</span>
+            Poli<span className="text-yellow-400">Temu</span>
           </h1>
 
           <p className="mt-4 text-gray-300 text-lg leading-relaxed max-w-lg">

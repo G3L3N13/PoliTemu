@@ -11,7 +11,7 @@ export default function Layout({ children }) {
   return (
     <>
       {user ? <Navbar /> : <NavbarPublic />}
-      <main className="pt-16">
+      <main>
         {children}
       </main>
       <FloatingChat />

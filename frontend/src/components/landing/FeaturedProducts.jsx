@@ -2,11 +2,67 @@
 import { useEffect, useState } from "react";
 import { productosService } from "../../services/api";
 
+
 const valoraciones = [
   { nombre: "Sarah M.", texto: "Encontré todos mis libros de cálculo a mitad de precio. ¡Increíble plataforma!", estrellas: 5, avatar: "S" },
   { nombre: "Alex K.", texto: "Vendí mi calculadora en menos de un día. El proceso fue muy sencillo y seguro.", estrellas: 5, avatar: "A" },
   { nombre: "James R.", texto: "La comunidad universitaria es muy activa. Siempre hay productos nuevos disponibles.", estrellas: 4, avatar: "J" },
 ];
+
+const funcionalidades = [
+  {
+    titulo: "Compra y vende fácilmente",
+    descripcion:
+      "Publica productos académicos en pocos segundos y encuentra compradores dentro de la comunidad universitaria.",
+    puntos: [
+      "Publicaciones rápidas",
+      "Carga de imágenes",
+      "Categorías organizadas"
+    ],
+    icono: "🛍️",
+    imagen: "./src/assets/publicaciones.jpg"
+  },
+
+  {
+    titulo: "Comunicación en tiempo real",
+    descripcion:
+      "Contacta directamente con vendedores mediante el chat integrado.",
+    puntos: [
+      "Chat privado",
+      "Negociación inmediata",
+      "Mensajes seguros"
+    ],
+    icono: "💬",
+    imagen: "./src/assets/chat.jpg"
+  },
+
+  {
+    titulo: "Comunidad Universitaria",
+    descripcion:
+      "Solo estudiantes de la Escuela Politécnica Nacional pueden acceder a la plataforma.",
+    puntos: [
+      "Usuarios verificados",
+      "Mayor confianza",
+      "Ambiente seguro"
+    ],
+    icono: "🎓",
+    imagen: "./src/assets/comunidad.jpeg"
+  },
+
+  {
+    titulo: "Acceso Seguro",
+    descripcion:
+      "Protegemos la información mediante autenticación institucional.",
+    puntos: [
+      "Autenticación con correo institucional",
+      "Protección de datos",
+      "Control de acceso"
+    ],
+    icono: "🔐",
+    imagen: "./src/assets/seguridad.jpg"
+  }
+];
+
 
 function Estrellas({ cantidad }) {
   return (
@@ -24,8 +80,9 @@ function FeaturedProducts({ onOpenModal }) {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
 
-  // 🔥 ESTADO NUEVO: Controla cuántos productos se muestran (inicia en 4)
+  // Controla cuántos productos se muestran (inicia en 4)
   const [limiteVisible, setLimiteVisible] = useState(4);
+  const [featureActual, setFeatureActual] = useState(0);
 
   const obtenerPrimeraImagen = (imagenUrl) => {
     if (!imagenUrl) return "https://via.placeholder.com/400x300?text=Sin+imagen";
@@ -38,7 +95,7 @@ function FeaturedProducts({ onOpenModal }) {
     const cargar = async () => {
       try {
         const data = await productosService.getTodos();
-        // 🔥 CORRECCIÓN: Guardamos todo el arreglo mapeando los IDs correctamente
+        // Guardamos todo el arreglo mapeando los IDs correctamente
         const items = Array.isArray(data)
           ? data.map(p => ({ id: p._id || p.id, ...p }))
           : [];
@@ -53,7 +110,23 @@ function FeaturedProducts({ onOpenModal }) {
     cargar();
   }, []);
 
-  // 🔥 FUNCIÓN NUEVA: Sumar 4 productos adicionales al hacer click
+  useEffect(() => {
+
+    const intervalo = setInterval(() => {
+
+      setFeatureActual((prev) =>
+        prev === funcionalidades.length - 1
+          ? 0
+          : prev + 1
+      );
+
+    }, 4500);
+
+    return () => clearInterval(intervalo);
+
+  }, []);
+
+  // Sumar 4 productos adicionales al hacer click
   const cargarMasProductos = () => {
     setLimiteVisible((prev) => prev + 4);
   };
@@ -142,10 +215,10 @@ function FeaturedProducts({ onOpenModal }) {
             </div>
           )}
 
-          {/* 🔥 BOTÓN DINÁMICO RECONFIGURADO: Solo aparece si quedan más productos ocultos por renderizar */}
+          {/* Solo aparece si quedan más productos ocultos por renderizar */}
           {!cargando && productos.length > limiteVisible && (
             <div className="text-center mt-12">
-              <button 
+              <button
                 onClick={cargarMasProductos}
                 className="border border-white/20 text-gray-300 hover:bg-white/10 px-8 py-3 rounded-2xl transition text-sm font-semibold cursor-pointer"
               >
@@ -156,21 +229,96 @@ function FeaturedProducts({ onOpenModal }) {
         </div>
       </section>
 
-      <section className="py-20 px-6 bg-white/[0.02] border-y border-white/10">
-        <div className="max-w-7xl mx-auto grid md:grid-cols-4 gap-8 text-center">
-          {[
-            { icon: "🛍️", titulo: "Compra y vende", desc: "Publica tus artículos en segundos" },
-            { icon: "💬", titulo: "Comunicación Directa", desc: "Conecta con vendedores fácilmente" },
-            { icon: "🎓", titulo: "Comunidad Universitaria", desc: "Solo para estudiantes de la EPN" },
-            { icon: "🔐", titulo: "Autenticación", desc: "Acceso seguro con cuenta institucional" },
-          ].map((f) => (
-            <div key={f.titulo} className="p-6">
-              <span className="text-4xl">{f.icon}</span>
-              <h3 className="text-white font-bold text-lg mt-4">{f.titulo}</h3>
-              <p className="text-gray-400 text-sm mt-2">{f.desc}</p>
+      <section className="py-24 px-6">
+
+        <div className="max-w-7xl mx-auto">
+
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+
+            {/* Imagen */}
+
+            <div className="relative">
+
+              <div className="rounded-3xl overflow-hidden border border-white/10 bg-white/5">
+
+                <img
+                  src={funcionalidades[featureActual].imagen}
+                  alt=""
+                  className="w-full h-[450px] object-cover transition-all duration-700"
+                />
+
+              </div>
+
             </div>
-          ))}
+
+            {/* Texto */}
+
+            <div>
+
+              <span className="text-6xl">
+                {funcionalidades[featureActual].icono}
+              </span>
+
+              <h2 className="text-5xl font-black text-white mt-6">
+
+                {funcionalidades[featureActual].titulo}
+
+              </h2>
+
+              <p className="text-gray-400 mt-6 text-lg leading-relaxed">
+
+                {funcionalidades[featureActual].descripcion}
+
+              </p>
+
+              <div className="mt-8 space-y-4">
+
+                {funcionalidades[featureActual].puntos.map((p) => (
+
+                  <div
+                    key={p}
+                    className="flex items-center gap-3"
+                  >
+
+                    <div className="w-7 h-7 rounded-full bg-yellow-400 text-black flex items-center justify-center font-bold">
+                      ✓
+                    </div>
+
+                    <span className="text-gray-300">
+                      {p}
+                    </span>
+
+                  </div>
+
+                ))}
+
+              </div>
+
+              {/* Indicadores */}
+
+              <div className="flex gap-3 mt-10">
+
+                {funcionalidades.map((_, index) => (
+
+                  <button
+                    key={index}
+                    onClick={() => setFeatureActual(index)}
+                    className={`h-3 rounded-full transition-all duration-300 ${featureActual === index
+                      ? "w-10 bg-yellow-400"
+                      : "w-3 bg-gray-600"
+                      }`}
+                  />
+
+                ))}
+
+              </div>
+
+            </div>
+
+          </div>
+
         </div>
+
       </section>
 
       <section className="py-28 px-6">

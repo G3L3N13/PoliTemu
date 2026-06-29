@@ -26,6 +26,9 @@ import Carrito from "./pages/Carrito";
 import Ofertas from "./pages/Ofertas";
 import ForgotPassword from "./pages/ForgotPassword";
 import EditarProducto from "./pages/EditarProducto";
+import AdminProductosLista from "./pages/AdminProductosLista";
+import AdminUsuarios from "./pages/AdminUsuarios";
+import AdminOfertas from "./pages/AdminOfertas";
 function AppRoutes() {
   return (
     <Routes>

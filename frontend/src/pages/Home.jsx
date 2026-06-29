@@ -3,7 +3,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { carritoService } from "../services/api";
-
 import Hero from "../components/landing/Hero";
 import Categories from "../components/landing/Categories";
 import FeaturedProducts from "../components/landing/FeaturedProducts";
