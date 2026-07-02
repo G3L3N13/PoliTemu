@@ -53,17 +53,19 @@ router.post("/create-session", async (req, res) => {
 
 // Webhook: stripe envía eventos (p. ej. checkout.session.completed)
 // ESTA RUTA USA express.raw para verificar la firma
-router.post("/webhook", express.raw({ type: "application/json" }), async (req, res) => {
+router.post("/webhook", async (req, res) => {
   const sig = req.headers["stripe-signature"];
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
   let event;
   try {
+    // Si tenemos req.rawBody (se estableció en el middleware), úsalo para verificar la firma
+    const rawBody = req.rawBody ? req.rawBody : JSON.stringify(req.body);
     if (webhookSecret) {
-      event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+      event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
     } else {
-      // Si no hay webhook secret (solo para dev), usa body directamente (no recomendado en prod)
-      event = JSON.parse(req.body.toString());
+      // En dev sin webhook signing secreto, parseamos el body (NO recomendado en prod)
+      event = req.body;
     }
   } catch (err) {
     console.error("Webhook signature verification failed:", err.message);

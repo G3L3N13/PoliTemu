@@ -38,7 +38,15 @@ app.use(cors({
   optionsSuccessStatus: 200
 }));
 
-app.use(express.json());
+// Capturar raw body para el webhook de Stripe (necesario para verificar la firma)
+app.use(express.json({
+  verify: (req, res, buf) => {
+    // Guardamos el raw buffer para rutas de webhook (ajusta la ruta si es distinto)
+    if (req.originalUrl && req.originalUrl.startsWith('/api/checkout/webhook')) {
+      req.rawBody = buf;
+    }
+  }
+}));
 app.use(morgan("dev"));
 
 // DEBUG: opcional, mostrar Authorization en dev para ayudar a depurar (no sensible en prod)
