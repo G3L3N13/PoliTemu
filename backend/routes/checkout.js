@@ -1,6 +1,7 @@
 // backend/routes/checkout.js
 import express from "express";
 import Stripe from "stripe";
+import { db } from "../config/firebase.js"; // usa tu Firestore admin exportado
 
 const router = express.Router();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -16,7 +17,6 @@ router.post("/create-session", async (req, res) => {
       return res.status(400).json({ error: "El carrito está vacío" });
     }
 
-    // Mapear items al formato de Stripe (price_data)
     const line_items = items.map((item) => ({
       price_data: {
         currency,
@@ -38,13 +38,12 @@ router.post("/create-session", async (req, res) => {
       customer_email: customer_email || undefined,
       success_url: successUrl || `${process.env.FRONTEND_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: cancelUrl || `${process.env.FRONTEND_URL}/carrito`,
-      // Puedes pasar metadata si necesitas relacionar con tu DB
       metadata: {
         integration: "politemu"
+        // puedes añadir orderId u otra referencia aquí
       }
     });
 
-    // devolver url y id
     return res.json({ id: session.id, url: session.url });
   } catch (error) {
     console.error("Error creando session Stripe:", error);
@@ -53,7 +52,7 @@ router.post("/create-session", async (req, res) => {
 });
 
 // Webhook: stripe envía eventos (p. ej. checkout.session.completed)
-// IMPORTANTE: esta ruta debe recibir raw body para verificar la firma (usa express.raw)
+// ESTA RUTA USA express.raw para verificar la firma
 router.post("/webhook", express.raw({ type: "application/json" }), async (req, res) => {
   const sig = req.headers["stripe-signature"];
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -63,38 +62,72 @@ router.post("/webhook", express.raw({ type: "application/json" }), async (req, r
     if (webhookSecret) {
       event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
     } else {
-      // Si no hay webhook secret (no recomendado en prod), confiar en el body (solo para dev, con cuidado)
-      event = req.body;
+      // Si no hay webhook secret (solo para dev), usa body directamente (no recomendado en prod)
+      event = JSON.parse(req.body.toString());
     }
   } catch (err) {
     console.error("Webhook signature verification failed:", err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  // Manejar eventos
-  switch (event.type) {
-    case "checkout.session.completed": {
-      const session = event.data.object;
-      console.log("Checkout completed:", session.id, "amount_total:", session.amount_total);
+  try {
+    switch (event.type) {
+      case "checkout.session.completed": {
+        const session = event.data.object;
+        console.log("Checkout completed - session id:", session.id);
 
-      // TODO: aquí marca pedido como pagado en tu DB:
-      // - recuperar metadata si guardaste order id
-      // - crear registro de pago / pedido
-      // Ejemplo pseudo-código:
-      // await ordersService.markAsPaid({ sessionId: session.id, amount: session.amount_total, customer_email: session.customer_email });
+        // --- IDempotencia: evitar crear duplicados ---
+        const pagosQuery = await db.collection("pagos")
+          .where("sessionId", "==", session.id)
+          .limit(1)
+          .get();
 
-      break;
+        if (!pagosQuery.empty) {
+          console.log("Pago ya registrado para session:", session.id);
+          break; // ya existe, no continuar
+        }
+
+        // --- Guardar pago en Firestore ---
+        const pagoDoc = {
+          sessionId: session.id,
+          amount_total: session.amount_total, // en centavos
+          currency: session.currency,
+          customer_email: session.customer_email || null,
+          // cualquier metadata adicional que quieras guardar:
+          metadata: session.metadata || {},
+          created_at: new Date()
+        };
+
+        await db.collection("pagos").add(pagoDoc);
+        console.log("Pago registrado en Firestore:", pagoDoc);
+
+        // --- Opcional: actualizar pedido/orden en tu colección si usas orders ---
+        // if (session.metadata && session.metadata.orderId) {
+        //   await db.collection("orders").doc(session.metadata.orderId).update({
+        //     status: "paid",
+        //     paid_at: new Date(),
+        //     payment_session_id: session.id
+        //   });
+        // }
+
+        break;
+      }
+
+      case "payment_intent.succeeded": {
+        // opcional: manejar payment intent si te interesa
+        break;
+      }
+
+      default:
+        console.log(`Unhandled event type ${event.type}`);
     }
-
-    case "payment_intent.succeeded": {
-      // opcional
-      break;
-    }
-
-    default:
-      console.log(`Unhandled event type ${event.type}`);
+  } catch (e) {
+    console.error("Error handling webhook event:", e);
+    // si hay un error interno, responde 500 para que Stripe reintente
+    return res.status(500).send();
   }
 
+  // Responder 200 OK a Stripe
   res.json({ received: true });
 });
 

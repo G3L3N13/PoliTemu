@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
+import { useAuth } from "../context/AuthContext";
 import { carritoService, productosService } from "../services/api";
+import CheckoutButton from "../components/CheckoutButton";
 
 function Carrito() {
+    const { user } = useAuth();
     const [items, setItems] = useState([]);
     const [cargando, setCargando] = useState(true);
 
@@ -68,6 +71,14 @@ function Carrito() {
             acc + item.precio * item.cantidad,
         0
     );
+
+    // Preparar items en el formato que el endpoint /checkout/create-session espera
+    const stripeItems = items.map((item) => ({
+        id: item._id || item.id || "",
+        nombre: item.nombre || item.title || `Producto ${item._id || item.id || ""}`,
+        precio: Number(item.precio) || 0,
+        cantidad: Number(item.cantidad) || 1
+    }));
 
     if (cargando) {
         return (
@@ -158,11 +169,13 @@ function Carrito() {
                                 Vaciar carrito
                             </button>
 
-                            <button
-                                className="bg-purple-600 hover:bg-purple-500 px-6 py-3 rounded-xl"
-                            >
-                                Finalizar compra
-                            </button>
+                            {/* Aquí reemplazamos el botón "Finalizar compra" por el CheckoutButton */}
+                            <div>
+                                <CheckoutButton
+                                    items={stripeItems}
+                                    customerEmail={user?.email}
+                                />
+                            </div>
                         </div>
                     </div>
                 </>
