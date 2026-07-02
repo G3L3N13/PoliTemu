@@ -125,6 +125,44 @@ router.post("/create-session", async (req, res) => {
   }
 });
 
+// GET /api/checkout/session?sessionId=...
+// Devuelve la session de Stripe (expand payment_intent) para mostrar en frontend.
+// Opcionalmente se puede exigir Authorization y validar uid para mayor seguridad.
+router.get("/session", async (req, res) => {
+  try {
+    const sessionId = req.query.sessionId || req.query.session_id || req.query.id;
+    if (!sessionId) return res.status(400).json({ error: "sessionId query param is required" });
+
+    // Recuperar sesión desde Stripe (expandir payment_intent para más detalles)
+    const session = await stripe.checkout.sessions.retrieve(sessionId, { expand: ["payment_intent", "customer"] });
+
+    // Opcional: seguridad adicional
+    // Si quieres que solo el usuario propietario vea la session, descomenta lo siguiente:
+    /*
+    try {
+      const authHeader = req.headers.authorization || "";
+      const token = authHeader.startsWith("Bearer ") ? authHeader.split(" ")[1] : null;
+      if (!token) return res.status(401).json({ error: "Authorization required" });
+      const decoded = await authAdmin.verifyIdToken(token);
+      const uid = decoded.uid;
+      // Si en metadata guardaste uid al crear la session, compararlo:
+      if (session.metadata && session.metadata.uid && session.metadata.uid !== uid) {
+        return res.status(403).json({ error: "Access denied to this session" });
+      }
+    } catch (e) {
+      // Si hay error verificando token, devolvemos 401
+      return res.status(401).json({ error: "Invalid auth token" });
+    }
+    */
+
+    return res.json(session);
+  } catch (err) {
+    console.error("Error retrieving Stripe session:", err && err.message ? err.message : err);
+    return res.status(500).json({ error: "Error retrieving session from Stripe" });
+  }
+});
+
+
 // Webhook: stripe envía eventos (usamos req.rawBody para verificar firma)
 router.post("/webhook", async (req, res) => {
   const sig = req.headers["stripe-signature"];

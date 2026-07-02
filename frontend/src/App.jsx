@@ -30,7 +30,7 @@ import AdminProductosLista from "./pages/AdminProductosLista";
 import AdminUsuarios from "./pages/AdminUsuarios";
 import AdminOfertas from "./pages/AdminOfertas";
 import Success from "./pages/Success";
-
+import Cancel from "./pages/Cancel";
 function AppRoutes() {
   return (
     <Routes>
@@ -51,7 +51,7 @@ function AppRoutes() {
       <Route path="/carrito" element={<PrivateRoute><Layout><Carrito /></Layout></PrivateRoute>} />
       <Route path="/ofertas" element={<PrivateRoute><Layout><Ofertas /></Layout></PrivateRoute>} />
       <Route path="/editar-producto/:id" element={<PrivateRoute><Layout><EditarProducto /></Layout></PrivateRoute>} />
-      
+      <Route path="/cancel" element={<Cancel />} />
       {/* Chat unificado */}
       <Route path="/chat" element={<PrivateRoute><Layout><ChatPage /></Layout></PrivateRoute>} />
       <Route path="/chat/:vendedorId" element={<PrivateRoute><Layout><ChatPage /></Layout></PrivateRoute>} />
