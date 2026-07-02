@@ -7,7 +7,7 @@ import path from "path"; // Importante para manejar rutas de archivos
 import { fileURLToPath } from "url"; // Importante para __dirname en ES Modules
 import { db } from "./config/firebase.js";
 import { verificarFirebaseToken } from "./middlewares/authMiddleware.js";
-
+import checkoutRoutes from "./routes/checkout.js";
 // Importaciones de rutas
 import productosRoutes from "./routes/productos.js";
 import carritoRoutes from "./routes/carrito.js";
@@ -56,7 +56,7 @@ app.use("/api/carrito", verificarFirebaseToken, carritoRoutes);
 app.use("/api/ofertas", verificarFirebaseToken, ofertasRoutes);
 app.use("/api/perfil", verificarFirebaseToken, perfilRoutes);
 app.use("/api/chats", verificarFirebaseToken, chatRoutes);
-
+app.use("/api/checkout", checkoutRoutes);
 // --- SERVIR FRONTEND ---
 // 1. Servir archivos estáticos desde la carpeta 'dist' (la carpeta que genera npm run build)
 const distPath = path.join(__dirname, "../frontend/dist"); 
