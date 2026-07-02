@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { productosService } from "../services/api";
+import { auth } from "../services/firebase";
 
 function SellerProfile() {
   const { vendedorId } = useParams();
@@ -12,6 +13,15 @@ function SellerProfile() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
 
+  // reseñas
+  const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+  const [rating, setRating] = useState(5);
+  const [comentario, setComentario] = useState("");
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewError, setReviewError] = useState(null);
+  const [userHasReviewed, setUserHasReviewed] = useState(false);
+
   useEffect(() => {
     let mounted = true;
 
@@ -20,11 +30,12 @@ function SellerProfile() {
       setError(null);
 
       try {
-        // Cargar datos del vendedor desde backend público
-       // Cambia esto en SellerProfile.jsx
-// Si VITE_API_URL termina en /api, esto lo limpia
-        const baseURL = import.meta.env.VITE_API_URL.replace(/\/api$/, ""); 
-        const { data } = await axios.get(`${baseURL}/api/usuarios/${vendedorId}`);
+        // Determinar apiBase de forma segura
+        const envApi = import.meta.env.VITE_API_URL;
+        const apiBase = envApi ? envApi.replace(/\/$/, "") : "/api";
+
+        // Cargar datos del vendedor (ruta pública)
+        const { data } = await axios.get(`${apiBase}/usuarios/${vendedorId}`);
         if (!mounted) return;
         setVendedor(data);
 
@@ -35,6 +46,9 @@ function SellerProfile() {
           : [];
         if (!mounted) return;
         setProductos(productosVendedor);
+
+        // Cargar reseñas
+        await fetchReviews(apiBase, mounted, data);
       } catch (err) {
         console.error("Error al cargar datos del vendedor:", err);
         if (!mounted) return;
@@ -50,13 +64,104 @@ function SellerProfile() {
     return () => {
       mounted = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vendedorId]);
 
+  // Helper: primera imagen
   const obtenerPrimeraImagen = (imagenUrl) => {
     if (!imagenUrl) return "/placeholder.png";
     if (Array.isArray(imagenUrl) && imagenUrl.length > 0) return imagenUrl[0];
     const urls = String(imagenUrl).split(",").map(u => u.trim()).filter(Boolean);
     return urls[0] || "/placeholder.png";
+  };
+
+  // Cargar reseñas (se separa para poder reusar)
+  const fetchReviews = async (apiBaseParam, mounted = true, sellerData = null) => {
+    setReviewsLoading(true);
+    try {
+      const envApi = import.meta.env.VITE_API_URL;
+      const apiBase = apiBaseParam || (envApi ? envApi.replace(/\/$/, "") : "/api");
+      const resp = await axios.get(`${apiBase}/usuarios/${vendedorId}/reseñas`);
+      if (!mounted) return;
+      const list = Array.isArray(resp.data) ? resp.data : [];
+      setReviews(list);
+
+      // comprobar si el usuario actual ya reseñó
+      const currentUid = auth.currentUser?.uid;
+      if (currentUid) {
+        setUserHasReviewed(Boolean(list.find(r => r.authorUid === currentUid)));
+      } else {
+        setUserHasReviewed(false);
+      }
+
+      // si nos pasaron sellerData y no tiene calificacion, intentar mapear
+      if (sellerData && !sellerData.calificacion && list.length > 0) {
+        // calcular promedio local (solo UI)
+        const avg = list.reduce((s, r) => s + (r.rating || 0), 0) / list.length;
+        setVendedor(prev => ({ ...prev, calificacion: avg }));
+      }
+    } catch (err) {
+      console.error("Error cargando reseñas:", err);
+    } finally {
+      setReviewsLoading(false);
+    }
+  };
+
+  // Envío de reseña
+  const handleSubmitReview = async () => {
+    setReviewError(null);
+
+    // Validaciones cliente
+    if (!auth.currentUser) {
+      setReviewError("Debes iniciar sesión para escribir una reseña.");
+      return;
+    }
+    if (auth.currentUser.uid === String(vendedorId)) {
+      setReviewError("No puedes reseñarte a ti mismo.");
+      return;
+    }
+    if (userHasReviewed) {
+      setReviewError("Ya has reseñado a este vendedor.");
+      return;
+    }
+    if (!rating || rating < 1 || rating > 5) {
+      setReviewError("Rating inválido.");
+      return;
+    }
+
+    setSubmittingReview(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const envApi = import.meta.env.VITE_API_URL;
+      const apiBase = envApi ? envApi.replace(/\/$/, "") : "/api";
+
+      const resp = await axios.post(
+        `${apiBase}/usuarios/${vendedorId}/reseñas`,
+        { rating, comentario },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      // añadir reseña a UI
+      const created = resp.data;
+      setReviews(prev => [created, ...prev]);
+      setUserHasReviewed(true);
+      setComentario("");
+      setRating(5);
+
+      // refrescar vendedor (para actualizar calificacion)
+      try {
+        const sellerResp = await axios.get(`${apiBase}/usuarios/${vendedorId}`);
+        setVendedor(sellerResp.data);
+      } catch (e) {
+        console.warn("No se pudo refrescar vendedor tras reseña:", e);
+      }
+    } catch (err) {
+      console.error("Error creando reseña:", err);
+      const msg = err?.response?.data?.error || err.message || "Error al enviar reseña";
+      setReviewError(msg);
+    } finally {
+      setSubmittingReview(false);
+    }
   };
 
   if (cargando) {
@@ -87,6 +192,9 @@ function SellerProfile() {
     );
   }
 
+  // Mostrar calificación guardando compatibilidad con calificacionPromedio
+  const calificacionMostrar = Number(vendedor.calificacion ?? vendedor.calificacionPromedio ?? 0).toFixed(1);
+
   return (
     <div className="min-h-screen bg-[#0a0a1a] text-white px-6 py-10">
       <div className="max-w-6xl mx-auto">
@@ -99,8 +207,12 @@ function SellerProfile() {
 
         <div className="bg-gradient-to-br from-purple-600/20 to-blue-900/20 border border-white/10 rounded-3xl p-8 mb-12">
           <div className="flex items-start gap-6">
-            <div className="w-32 h-32 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-5xl font-bold text-white flex-shrink-0">
-              {((vendedor.fullName || vendedor.nombre || "V")[0] || "V").toUpperCase()}
+            <div className="w-32 h-32 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-5xl font-bold text-white flex-shrink-0 overflow-hidden">
+              {vendedor.fotoPerfil ? (
+                <img src={vendedor.fotoPerfil} alt="avatar" className="w-full h-full object-cover" />
+              ) : (
+                ((vendedor.fullName || vendedor.nombre || "V")[0] || "V").toUpperCase()
+              )}
             </div>
 
             <div className="flex-1">
@@ -119,7 +231,7 @@ function SellerProfile() {
                   <p className="text-gray-400">Ventas</p>
                 </div>
                 <div>
-                  <p className="text-3xl font-black text-cyan-400">⭐ {Number(vendedor.calificacionPromedio ?? 0).toFixed(1)}</p>
+                  <p className="text-3xl font-black text-cyan-400">⭐ {calificacionMostrar}</p>
                   <p className="text-gray-400">Calificación</p>
                 </div>
               </div>
@@ -142,6 +254,7 @@ function SellerProfile() {
           </div>
         </div>
 
+        {/* Productos */}
         <div>
           <h2 className="text-4xl font-black text-white mb-8">
             Productos de <span className="text-yellow-400">{vendedor.fullName || vendedor.nombre}</span>
@@ -153,7 +266,7 @@ function SellerProfile() {
               <p className="text-lg">Este vendedor aún no tiene productos publicados.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
               {productos.map((producto) => (
                 <div
                   key={producto._id || producto.id}
@@ -191,6 +304,48 @@ function SellerProfile() {
               ))}
             </div>
           )}
+        </div>
+
+        {/* Sección de reseñas integradas */}
+        <div className="max-w-4xl mx-auto bg-white/5 p-6 rounded-2xl">
+          <h3 className="text-2xl font-semibold mb-4">Reseñas</h3>
+
+          <div className="mb-6">
+            <label className="block mb-2">Tu calificación</label>
+            <select value={rating} onChange={(e) => setRating(Number(e.target.value))} className="p-2 rounded bg-white/5">
+              <option value={5}>5 - Excelente</option>
+              <option value={4}>4 - Muy bueno</option>
+              <option value={3}>3 - Bueno</option>
+              <option value={2}>2 - Regular</option>
+              <option value={1}>1 - Malo</option>
+            </select>
+            <textarea value={comentario} onChange={(e) => setComentario(e.target.value)} placeholder="Escribe tu reseña..." className="w-full mt-2 p-3 bg-white/5 rounded" />
+            <div className="mt-2 flex gap-2">
+              <button disabled={submittingReview || userHasReviewed} onClick={handleSubmitReview} className="bg-purple-600 px-4 py-2 rounded">
+                {submittingReview ? "Enviando..." : userHasReviewed ? "Ya reseñaste" : "Enviar reseña"}
+              </button>
+            </div>
+            {reviewError && <p className="text-red-400 mt-2">{reviewError}</p>}
+          </div>
+
+          <div className="space-y-4">
+            {reviewsLoading ? (
+              <p className="text-gray-300">Cargando reseñas...</p>
+            ) : reviews.length === 0 ? (
+              <p className="text-gray-400">Este vendedor no tiene reseñas aún.</p>
+            ) : (
+              reviews.map((r) => (
+                <div key={r.id} className="p-4 bg-white/3 rounded">
+                  <div className="flex justify-between items-center">
+                    <div className="font-semibold text-sm">{r.authorUid}</div>
+                    <div className="text-yellow-400 font-bold">{r.rating}/5</div>
+                  </div>
+                  <p className="text-gray-200 mt-2">{r.comentario}</p>
+                  <div className="text-gray-400 text-sm mt-2">{new Date(r.created_at).toLocaleString()}</div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
     </div>

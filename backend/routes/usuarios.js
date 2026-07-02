@@ -16,7 +16,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-// 🔥 SOLUCIÓN AL 404: Obtener perfil del usuario autenticado
+// Obtener perfil del usuario autenticado
 router.get("/profile/me", verificarFirebaseToken, async (req, res) => {
   try {
     const { uid } = req.user;
@@ -33,17 +33,16 @@ router.get("/profile/me", verificarFirebaseToken, async (req, res) => {
   }
 });
 
-// 🔥 SOLUCIÓN AL PERMISSION DENIED: Endpoint público para datos de un vendedor/usuario
-// Se coloca ANTES de /:id para interceptar correctamente la ruta
+// Datos públicos de un usuario/vendedor
 router.get("/datos/:uid", async (req, res) => {
   try {
     const { uid } = req.params;
     const doc = await db.collection("usuarios").doc(uid).get();
-    
+
     if (!doc.exists) {
       return res.status(404).json({ error: "Usuario no encontrado" });
     }
-    
+
     res.json({ id: doc.id, ...doc.data() });
   } catch (error) {
     console.error("Error al obtener datos públicos del usuario:", error);
@@ -51,8 +50,7 @@ router.get("/datos/:uid", async (req, res) => {
   }
 });
 
-// 🔥 ENDPOINT PARA LA BARRA LATERAL DEL CHAT
-// Recupera todas las salas de chat activas donde participa este estudiante
+// Endpoint para la barra lateral del chat
 router.get("/chats/:uid", async (req, res) => {
   try {
     const { uid } = req.params;
@@ -62,7 +60,7 @@ router.get("/chats/:uid", async (req, res) => {
       .get();
 
     if (chatsSnapshot.empty) {
-      return res.json([]); 
+      return res.json([]);
     }
 
     const listaChats = chatsSnapshot.docs.map(doc => {
@@ -267,5 +265,80 @@ router.get("/role", verificarFirebaseToken, async (req, res) => {
   }
 });
 
+/* ========================
+   Reseñas (reviews)
+   POST /api/usuarios/:uid/reseñas  -> crear reseña (auth required)
+   GET  /api/usuarios/:uid/reseñas  -> listar reseñas públicas
+   ======================== */
+
+// Crear una reseña para un vendedor
+router.post("/:uid/reseñas", verificarFirebaseToken, async (req, res) => {
+  try {
+    const sellerUid = req.params.uid;
+    const { uid: authorUid } = req.user;
+    if (!sellerUid) return res.status(400).json({ error: "UID de vendedor requerido" });
+
+    // Evitar que el autor sea el mismo vendedor
+    if (sellerUid === authorUid) {
+      return res.status(400).json({ error: "No puedes reseñarte a ti mismo" });
+    }
+
+    const { rating, comentario } = req.body;
+    const ratingNum = Number(rating);
+    if (!ratingNum || ratingNum < 1 || ratingNum > 5) {
+      return res.status(400).json({ error: "rating debe ser un número entre 1 y 5" });
+    }
+
+    // Opcional: impedir duplicados por authorUid+sellerUid (por ejemplo una sola reseña por comprador)
+    const existing = await db.collection("reseñas")
+      .where("sellerUid", "==", sellerUid)
+      .where("authorUid", "==", authorUid)
+      .limit(1)
+      .get();
+
+    if (!existing.empty) {
+      return res.status(400).json({ error: "Ya has reseñado a este vendedor" });
+    }
+
+    const reviewDoc = {
+      sellerUid,
+      authorUid,
+      rating: ratingNum,
+      comentario: comentario || "",
+      created_at: new Date().toISOString()
+    };
+
+    const ref = await db.collection("reseñas").add(reviewDoc);
+
+    // Recalcular calificación promedio
+    const snaps = await db.collection("reseñas").where("sellerUid", "==", sellerUid).get();
+    const total = snaps.docs.reduce((acc, d) => acc + (d.data().rating || 0), 0);
+    const count = snaps.size || 1;
+    const avg = total / count;
+
+    await db.collection("usuarios").doc(sellerUid).update({
+      calificacion: avg,
+      totalResenas: count
+    });
+
+    res.json({ id: ref.id, ...reviewDoc });
+  } catch (err) {
+    console.error("Error creando reseña:", err);
+    res.status(500).json({ error: "Error creando reseña" });
+  }
+});
+
+// Listar reseñas de un vendedor
+router.get("/:uid/reseñas", async (req, res) => {
+  try {
+    const sellerUid = req.params.uid;
+    const snaps = await db.collection("reseñas").where("sellerUid", "==", sellerUid).orderBy("created_at", "desc").get();
+    const reviews = snaps.docs.map(d => ({ id: d.id, ...d.data() }));
+    res.json(reviews);
+  } catch (err) {
+    console.error("Error listando reseñas:", err);
+    res.status(500).json({ error: "Error listando reseñas" });
+  }
+});
 
 export default router;

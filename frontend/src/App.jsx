@@ -31,6 +31,9 @@ import AdminUsuarios from "./pages/AdminUsuarios";
 import AdminOfertas from "./pages/AdminOfertas";
 import Success from "./pages/Success";
 import Cancel from "./pages/Cancel";
+import Vendedor from "./pages/Vendedor";
+
+
 function AppRoutes() {
   return (
     <Routes>
@@ -41,6 +44,7 @@ function AppRoutes() {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
       <Route path="/success" element={<Success />} />
+      <Route path="/vendedor/:uid" element={<Vendedor />} />
       {/* Rutas Privadas */}
       <Route path="/home" element={<PrivateRoute><Layout><HomePrivado /></Layout></PrivateRoute>} />
       <Route path="/productos" element={<PrivateRoute><Layout><ProductosCatalogo /></Layout></PrivateRoute>} />

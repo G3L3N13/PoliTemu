@@ -1,6 +1,8 @@
+// frontend/src/pages/Register.jsx
 import { useState } from "react";
-import { auth } from "../services/firebase";
+import { auth, storage } from "../services/firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
+import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useNavigate, Link } from "react-router-dom";
 import buhoImg from "../assets/Buho_tienda.jpeg";
 
@@ -15,6 +17,8 @@ function Register() {
     direccion: "",
     descripcion: "",
   });
+  const [file, setFile] = useState(null);
+  const [preview, setPreview] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -24,67 +28,68 @@ function Register() {
     setFormData({ ...formData, [name]: value });
   };
 
+  const handleFileChange = (e) => {
+    const f = e.target.files?.[0];
+    setFile(f || null);
+    if (f) {
+      const url = URL.createObjectURL(f);
+      setPreview(url);
+    } else {
+      setPreview(null);
+    }
+  };
+
   const handleRegister = async () => {
     setError("");
 
-    if (!formData.fullName.trim()) {
-      setError("Ingresa tu nombre completo.");
-      return;
-    }
-    if (!formData.email.trim()) {
-      setError("Ingresa un correo válido.");
-      return;
-    }
-    if (!formData.telefono.trim()) {
-      setError("Ingresa tu número de teléfono.");
-      return;
-    }
-    if (!formData.ciudad.trim()) {
-      setError("Ingresa tu ciudad.");
-      return;
-    }
-    if (formData.password !== formData.confirmPassword) {
-      setError("Las contraseñas no coinciden.");
-      return;
-    }
-    if (formData.password.length < 6) {
-      setError("La contraseña debe tener al menos 6 caracteres.");
-      return;
-    }
+    if (!formData.fullName.trim()) { setError("Ingresa tu nombre completo."); return; }
+    if (!formData.email.trim()) { setError("Ingresa un correo válido."); return; }
+    if (!formData.telefono.trim()) { setError("Ingresa tu número de teléfono."); return; }
+    if (!formData.ciudad.trim()) { setError("Ingresa tu ciudad."); return; }
+    if (formData.password !== formData.confirmPassword) { setError("Las contraseñas no coinciden."); return; }
+    if (formData.password.length < 6) { setError("La contraseña debe tener al menos 6 caracteres."); return; }
 
     setLoading(true);
     try {
-      // 1. Crear usuario en Firebase Auth
+      // 1) Crear usuario en Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, formData.email.trim(), formData.password);
       const user = userCredential.user;
-
-      // 🔥 CORRECCIÓN 1: Obtener el token real de Firebase del usuario recién creado
       const token = await user.getIdToken();
 
-      // 🔥 CORRECCIÓN 2: Separar el fullName de forma limpia en nombre y apellido
+      // 2) Preparar nombre/apellidos
       const partesNombre = formData.fullName.trim().split(" ");
       const nombre = partesNombre[0] || "";
       const apellido = partesNombre.slice(1).join(" ") || " ";
 
-      // 2. Registrar el perfil del estudiante en el Backend
-      const response = await fetch("http://localhost:3000/api/usuarios/profile/create", {
+      // 3) Subir foto si existe
+      let fotoPerfilUrl = "";
+      if (file) {
+        const path = `profiles/${user.uid}/profile_${Date.now()}`;
+        const r = storageRef(storage, path);
+        await uploadBytes(r, file);
+        fotoPerfilUrl = await getDownloadURL(r);
+      }
+
+      // 4) Llamar backend para crear perfil
+      const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:3000/api"}/usuarios/profile/create`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`, // Ahora 'token' sí existe
+          "Authorization": `Bearer ${token}`,
         },
         body: JSON.stringify({
-          nombre,          // Ahora 'nombre' sí existe
-          apellido,        // Ahora 'apellido' sí existe
+          nombre,
+          apellido,
           telefono: formData.telefono,
           ciudad: formData.ciudad,
           direccion: formData.direccion,
           descripcion: formData.descripcion,
+          fotoPerfil: fotoPerfilUrl
         }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || "Error al sincronizar perfil con el servidor.");
       }
 
@@ -136,6 +141,15 @@ function Register() {
               <div className="bg-red-100 text-red-600 p-4 rounded-2xl mb-6">{error}</div>
             )}
 
+            {/* Perfil foto */}
+            <div className="mb-4">
+              <label className="block mb-2 font-medium text-gray-700">Foto de perfil (opcional)</label>
+              {preview ? (
+                <img src={preview} alt="preview" className="w-24 h-24 object-cover rounded-full mb-2" />
+              ) : null}
+              <input type="file" accept="image/*" onChange={handleFileChange} />
+            </div>
+
             {/* FORM - NOMBRE */}
             <div className="mb-5">
               <label className="block mb-2 font-medium text-gray-700">Nombre completo</label>
@@ -149,7 +163,9 @@ function Register() {
               />
             </div>
 
-            {/* FORM - EMAIL */}
+            {/* ... resto del formulario igual que antes ... */}
+            {/* (mantén el HTML que ya tenías para email, telefono, ciudad, etc.) */}
+
             <div className="mb-5">
               <label className="block mb-2 font-medium text-gray-700">Correo electrónico</label>
               <input
@@ -162,7 +178,6 @@ function Register() {
               />
             </div>
 
-            {/* FORM - TELÉFONO */}
             <div className="mb-5">
               <label className="block mb-2 font-medium text-gray-700">Teléfono</label>
               <input
@@ -175,7 +190,6 @@ function Register() {
               />
             </div>
 
-            {/* FORM - CIUDAD */}
             <div className="mb-5">
               <label className="block mb-2 font-medium text-gray-700">Ciudad</label>
               <input
@@ -188,7 +202,6 @@ function Register() {
               />
             </div>
 
-            {/* FORM - DIRECCIÓN */}
             <div className="mb-5">
               <label className="block mb-2 font-medium text-gray-700">Dirección</label>
               <input
@@ -201,7 +214,6 @@ function Register() {
               />
             </div>
 
-            {/* FORM - DESCRIPCIÓN */}
             <div className="mb-5">
               <label className="block mb-2 font-medium text-gray-700">Sobre ti (opcional)</label>
               <textarea
@@ -213,7 +225,6 @@ function Register() {
               />
             </div>
 
-            {/* FORM - CONTRASEÑA */}
             <div className="mb-5">
               <label className="block mb-2 font-medium text-gray-700">Contraseña</label>
               <input
@@ -226,7 +237,6 @@ function Register() {
               />
             </div>
 
-            {/* FORM - CONFIRMAR CONTRASEÑA */}
             <div className="mb-5">
               <label className="block mb-2 font-medium text-gray-700">Confirmar contraseña</label>
               <input
@@ -259,5 +269,4 @@ function Register() {
     </div>
   );
 }
-
 export default Register;
