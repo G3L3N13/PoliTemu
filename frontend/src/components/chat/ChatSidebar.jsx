@@ -4,7 +4,7 @@ import { io } from "socket.io-client";
 
 // --- CONFIGURACIÓN DINÁMICA ---
 const API_BASE = import.meta.env.VITE_API_URL || "https://politemu-servidor.onrender.com/api";
-const SOCKET_URL = API_BASE.replace("/api", "");
+const SOCKET_URL = (import.meta.env.VITE_WS_URL || API_BASE.replace("/api", "")) || "https://politemu-servidor.onrender.com";
 
 const socket = io(SOCKET_URL, { autoConnect: false });
 // ------------------------------
@@ -17,17 +17,34 @@ export default function ChatSidebar({ chatActivoId, onSeleccionarChat }) {
   useEffect(() => {
     if (!user) return;
 
-    // 1. Conectar al WebSocket
-    socket.connect();
+    // 1. Preparar token y conectar al WebSocket de forma segura
+    (async () => {
+      try {
+        const token = user ? await user.getIdToken() : null;
+        if (token) {
+          socket.auth = { token };
+        }
+        socket.connect();
+      } catch (err) {
+        console.error("Error preparando socket:", err);
+        // Intentar conectar sin token igual (opcional):
+        // socket.connect();
+      }
+    })();
 
     // 2. CARGA INICIAL
     const cargarConversacionesHistoricas = async () => {
       try {
-        // Usamos API_BASE en lugar de localhost
-        const response = await fetch(`${API_BASE}/usuarios/chats/${user.uid}`);
+        const response = await fetch(`${API_BASE}/usuarios/chats/${user.uid}`, {
+          headers: {
+            Authorization: `Bearer ${await user.getIdToken()}`
+          }
+        });
         if (response.ok) {
           const datos = await response.json();
           setConversaciones(datos);
+        } else {
+          console.warn("No se pudo obtener conversaciones, status:", response.status);
         }
       } catch (err) {
         console.error("Error al obtener lista de chats por HTTP:", err);
@@ -39,7 +56,7 @@ export default function ChatSidebar({ chatActivoId, onSeleccionarChat }) {
     cargarConversacionesHistoricas();
 
     // 3. TIEMPO REAL
-    socket.on("recibir_mensaje", (nuevoMensaje) => {
+    const manejarRecibirMensaje = (nuevoMensaje) => {
       setConversaciones((prevConversaciones) => {
         const existeChat = prevConversaciones.some((c) => c.id === nuevoMensaje.chatId);
 
@@ -57,10 +74,12 @@ export default function ChatSidebar({ chatActivoId, onSeleccionarChat }) {
         }
         return prevConversaciones;
       });
-    });
+    };
+
+    socket.on("recibir_mensaje", manejarRecibirMensaje);
 
     return () => {
-      socket.off("recibir_mensaje");
+      socket.off("recibir_mensaje", manejarRecibirMensaje);
       socket.disconnect();
     };
   }, [user]);
