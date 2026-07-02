@@ -41,6 +41,14 @@ app.use(cors({
 app.use(express.json());
 app.use(morgan("dev"));
 
+// DEBUG: opcional, mostrar Authorization en dev para ayudar a depurar (no sensible en prod)
+if (process.env.NODE_ENV !== 'production') {
+  app.use((req, res, next) => {
+    console.log('[DEBUG] HEADERS:', req.method, req.path, 'Authorization=', req.headers.authorization);
+    next();
+  });
+}
+
 // --- RUTAS API (Deben ir antes de la configuración de static) ---
 app.use("/api/productos", productosRoutes);
 app.use("/api/usuarios", usuariosRoutes);
@@ -51,13 +59,17 @@ app.use("/api/chats", verificarFirebaseToken, chatRoutes);
 
 // --- SERVIR FRONTEND ---
 // 1. Servir archivos estáticos desde la carpeta 'dist' (la carpeta que genera npm run build)
-// Ajusta la ruta para que salga de 'backend' y entre en 'frontend/dist'
-// Si tu carpeta de frontend se llama distinto, cámbialo en 'frontend'
 const distPath = path.join(__dirname, "../frontend/dist"); 
 
 console.log("Intentando servir archivos desde:", distPath);
 
 app.use(express.static(distPath));
+
+// ------------- Compatibilidad con rutas antiguas de assets -------------
+// Exponer frontend/src/assets temporalmente (fallback) y dist/assets
+app.use('/src/assets', express.static(path.join(__dirname, '../frontend/src/assets')));
+app.use('/assets', express.static(path.join(distPath, 'assets')));
+// ----------------------------------------------------------------------
 
 // La ruta comodín sigue igual, pero usando la misma variable
 app.get(/.*/, (req, res) => {
