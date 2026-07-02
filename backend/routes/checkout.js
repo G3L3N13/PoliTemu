@@ -1,14 +1,10 @@
 // backend/routes/checkout.js
 import express from "express";
 import Stripe from "stripe";
-import { db, authAdmin } from "../config/firebase.js"; // db y authAdmin exportados por tu config
+import { db, authAdmin } from "../config/firebase.js"; // usa db y authAdmin
 
 const router = express.Router();
-
-// Inicializar Stripe con la clave del entorno
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2022-11-15"
-});
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 // Helper: parsear body de forma segura
 function resolveBody(req) {
@@ -25,24 +21,21 @@ function resolveBody(req) {
 }
 
 // POST /api/checkout/create-session
-// Body esperado: { items: [{ id, nombre, precio, cantidad }], customer_email?: string, successUrl?: string, cancelUrl?: string }
 router.post("/create-session", async (req, res) => {
   try {
     const bodyData = resolveBody(req);
 
     console.log('DEBUG create-session: body recibido (resuelto):', JSON.stringify(bodyData).slice(0,2000));
     console.log('DEBUG create-session: STRIPE_SECRET_KEY presente?', !!process.env.STRIPE_SECRET_KEY);
-    console.log('DEBUG create-session: FRONTEND_URL =>', process.env.FRONTEND_URL || '(no definida)');
 
     const { items = [], customer_email, successUrl, cancelUrl } = bodyData || {};
-
     const currency = process.env.STRIPE_CURRENCY || "usd";
 
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: "El carrito está vacío o items no es un array" });
     }
 
-    // Validación y normalización: asegurar precios numéricos
+    // Normalizar items
     const normalizedItems = items.map((it) => {
       const precioNum = typeof it.precio === "number" ? it.precio : Number(it.precio);
       return {
@@ -64,7 +57,7 @@ router.post("/create-session", async (req, res) => {
       }
     }
 
-    // Intentar verificar token Firebase (opcional) para asociar uid en metadata
+    // Verificar token Firebase (opcional) para metadata.uid
     let uid = null;
     try {
       const authHeader = req.headers.authorization || req.headers.Authorization || "";
@@ -78,25 +71,30 @@ router.post("/create-session", async (req, res) => {
       console.warn("DEBUG create-session: no se pudo verificar token (continuando sin uid):", verifyErr?.message || verifyErr);
     }
 
-    // Construir line_items para Stripe
+    // Construir line_items
     const line_items = normalizedItems.map((item) => ({
       price_data: {
         currency,
         product_data: {
           name: item.nombre,
-          metadata: {
-            productId: item.id || ""
-          }
+          metadata: { productId: item.id || "" }
         },
-        unit_amount: Math.round(item.precio * 100) // convertir a centavos
+        unit_amount: Math.round(item.precio * 100)
       },
       quantity: item.cantidad
     }));
 
-    // Llamada a Stripe para crear la session
+    // Fallback para FRONTEND_URL: usa env; si no, deriva de la petición
+    const frontendBaseUrl = process.env.FRONTEND_URL
+      ? process.env.FRONTEND_URL.replace(/\/+$/, '')
+      : `${req.protocol}://${req.get('host')}`;
+
+    const successUrlFinal = successUrl || `${frontendBaseUrl}/success?session_id={CHECKOUT_SESSION_ID}`;
+    const cancelUrlFinal = cancelUrl || `${frontendBaseUrl}/carrito`;
+
+    // Llamada a Stripe
     console.log('DEBUG create-session: Llamando a Stripe para crear session con', line_items.length, 'line_items...');
     console.time('stripeCreateSession');
-
     let session;
     try {
       session = await stripe.checkout.sessions.create({
@@ -104,8 +102,8 @@ router.post("/create-session", async (req, res) => {
         line_items,
         mode: "payment",
         customer_email: customer_email || undefined,
-        success_url: successUrl || `${process.env.FRONTEND_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: cancelUrl || `${process.env.FRONTEND_URL}/carrito`,
+        success_url: successUrlFinal,
+        cancel_url: cancelUrlFinal,
         metadata: {
           integration: "politemu",
           uid: uid || ""
@@ -120,7 +118,6 @@ router.post("/create-session", async (req, res) => {
       return res.status(500).json({ error: 'Error creando sesión de pago (Stripe). Revisa logs del servidor.' });
     }
 
-    // Responder con session id y url (url existe en la mayoría de los casos)
     return res.json({ id: session.id, url: session.url });
   } catch (error) {
     console.error("Error creando session Stripe:", error);
@@ -128,8 +125,7 @@ router.post("/create-session", async (req, res) => {
   }
 });
 
-// Webhook: stripe envía eventos (p. ej. checkout.session.completed)
-// Esta ruta asume que en index.js se capturó el raw body para /api/checkout/webhook en express.json verify
+// Webhook: stripe envía eventos (usamos req.rawBody para verificar firma)
 router.post("/webhook", async (req, res) => {
   const sig = req.headers["stripe-signature"];
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -140,7 +136,6 @@ router.post("/webhook", async (req, res) => {
     if (webhookSecret) {
       event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
     } else {
-      // En desarrollo sin webhook signing secreto, usar req.body (NO recomendado en prod)
       event = req.body;
     }
   } catch (err) {
@@ -154,7 +149,6 @@ router.post("/webhook", async (req, res) => {
         const session = event.data.object;
         console.log("Checkout completed - session id:", session.id);
 
-        // Idempotencia: evitar duplicados
         const pagosQuery = await db.collection("pagos")
           .where("sessionId", "==", session.id)
           .limit(1)
@@ -165,10 +159,9 @@ router.post("/webhook", async (req, res) => {
           break;
         }
 
-        // Guardar pago en Firestore
         const pagoDoc = {
           sessionId: session.id,
-          amount_total: session.amount_total, // en centavos
+          amount_total: session.amount_total,
           currency: session.currency,
           customer_email: session.customer_email || null,
           metadata: session.metadata || {},
@@ -177,15 +170,10 @@ router.post("/webhook", async (req, res) => {
 
         await db.collection("pagos").add(pagoDoc);
         console.log("Pago registrado en Firestore:", pagoDoc);
-
-        // Si usas orders y pasas orderId en metadata, podrías actualizar la orden aquí
-        // if (session.metadata && session.metadata.orderId) { ... }
-
         break;
       }
 
       case "payment_intent.succeeded": {
-        // opcional: manejo adicional si necesitas
         break;
       }
 

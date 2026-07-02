@@ -3,8 +3,8 @@ import http from "http";
 import { Server } from "socket.io";
 import cors from "cors";
 import morgan from "morgan";
-import path from "path"; // Importante para manejar rutas de archivos
-import { fileURLToPath } from "url"; // Importante para __dirname en ES Modules
+import path from "path";
+import { fileURLToPath } from "url";
 import { db } from "./config/firebase.js";
 import { verificarFirebaseToken } from "./middlewares/authMiddleware.js";
 import checkoutRoutes from "./routes/checkout.js";
@@ -25,11 +25,12 @@ const server = http.createServer(app);
 
 // --- CONFIGURACIÓN CORS ---
 const allowedOrigins = [
-  "http://localhost:5173", 
-  "http://127.0.0.1:5173", 
-  process.env.FRONTEND_URL 
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  process.env.FRONTEND_URL
 ].filter(Boolean);
 
+// Nota: capturamos el raw body SOLO para la ruta del webhook para que Stripe pueda verificar firma
 app.use(cors({
   origin: allowedOrigins,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -38,10 +39,8 @@ app.use(cors({
   optionsSuccessStatus: 200
 }));
 
-// Capturar raw body para el webhook de Stripe (necesario para verificar la firma)
 app.use(express.json({
   verify: (req, res, buf) => {
-    // Guardamos el raw buffer para rutas de webhook (ajusta la ruta si es distinto)
     if (req.originalUrl && req.originalUrl.startsWith('/api/checkout/webhook')) {
       req.rawBody = buf;
     }
@@ -65,25 +64,24 @@ app.use("/api/ofertas", verificarFirebaseToken, ofertasRoutes);
 app.use("/api/perfil", verificarFirebaseToken, perfilRoutes);
 app.use("/api/chats", verificarFirebaseToken, chatRoutes);
 app.use("/api/checkout", checkoutRoutes);
+
 // --- SERVIR FRONTEND ---
-// 1. Servir archivos estáticos desde la carpeta 'dist' (la carpeta que genera npm run build)
-const distPath = path.join(__dirname, "../frontend/dist"); 
+const distPath = path.join(__dirname, "../frontend/dist");
 
 console.log("Intentando servir archivos desde:", distPath);
 
 app.use(express.static(distPath));
 
-// ------------- Compatibilidad con rutas antiguas de assets -------------
-// Exponer frontend/src/assets temporalmente (fallback) y dist/assets
+// Compatibilidad con rutas antiguas de assets
 app.use('/src/assets', express.static(path.join(__dirname, '../frontend/src/assets')));
 app.use('/assets', express.static(path.join(distPath, 'assets')));
-// ----------------------------------------------------------------------
 
-// La ruta comodín sigue igual, pero usando la misma variable
+// Ruta comodín para SPA
 app.get(/.*/, (req, res) => {
   console.log("⚠️ Petición recibida en catch-all:", req.path);
   res.sendFile(path.join(distPath, "index.html"));
 });
+
 // --- SOCKETS ---
 const io = new Server(server, {
   cors: {
