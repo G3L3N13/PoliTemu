@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: politemu-web
+    env: node
+    plan: free
+    branch: main
+    buildCommand: bash -lc "cd frontend && npm ci && npm run build && cd ../backend && npm ci"
+    startCommand: bash -lc "cd backend && npm start"
+    envVars:
+      - key: NODE_ENV
+        value: production
