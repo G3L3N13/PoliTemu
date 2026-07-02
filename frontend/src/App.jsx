@@ -29,6 +29,8 @@ import EditarProducto from "./pages/EditarProducto";
 import AdminProductosLista from "./pages/AdminProductosLista";
 import AdminUsuarios from "./pages/AdminUsuarios";
 import AdminOfertas from "./pages/AdminOfertas";
+import Success from "./pages/Success";
+
 function AppRoutes() {
   return (
     <Routes>
@@ -38,7 +40,7 @@ function AppRoutes() {
       <Route path="/" element={<Layout><Home /></Layout>} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
-
+      <Route path="/success" element={<Success />} />
       {/* Rutas Privadas */}
       <Route path="/home" element={<PrivateRoute><Layout><HomePrivado /></Layout></PrivateRoute>} />
       <Route path="/productos" element={<PrivateRoute><Layout><ProductosCatalogo /></Layout></PrivateRoute>} />
